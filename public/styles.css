@@ -1,0 +1,171 @@
+/* 🔄 Transiciones suaves */
+body, .card, .table, .form-control, .form-select, .editable, header, .btn {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 🌞 Tema claro */
+body {
+  --theme-bg: #f8fafc;
+  background-color: #f8fafc;
+  color: #212529;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+}
+
+/* Celdas editables */
+.editable {
+  background-color: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  padding: 4px 6px;
+  min-height: 30px;
+}
+
+.editable:focus {
+  border-color: #0d6efd;
+  outline: none;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
+}
+
+/* 🌙 Tema oscuro */
+body.dark {
+  --theme-bg: #1e1e1e;
+  background-color: #1e1e1e;
+  color: #f1f3f5;
+}
+
+/* Tarjetas */
+body.dark .card {
+  background-color: #2a2a2a;
+  color: #f1f3f5;
+  border-color: #444;
+}
+
+/* Inputs y selects */
+body.dark .form-control,
+body.dark .form-select,
+body.dark .editable {
+  background-color: #3a3a3a;
+  color: #f1f3f5;
+  border: 1px solid #666;
+}
+
+body.dark .form-control::placeholder,
+body.dark .editable::placeholder {
+  color: #bbb;
+}
+
+body.dark .form-control:focus,
+body.dark .form-select:focus,
+body.dark .editable:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
+}
+
+/* === TABLA === */
+
+/* Variables de fondo para cards */
+:root { --card-bg-light: #ffffff; }
+body.dark { --card-bg-dark: #2a2a2a; }
+
+body:not(.dark) .card { --card-bg: var(--card-bg-light); }
+body.dark .card { --card-bg: var(--card-bg-dark); }
+
+/* Hacemos que la tabla herede el fondo del card */
+.card .table {
+  background-color: transparent !important;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: inherit !important;
+  --bs-table-border-color: rgba(0,0,0,.125);
+}
+
+body.dark .card .table {
+  --bs-table-border-color: #444;
+}
+
+/* Todas las celdas transparentes */
+.card .table > :not(caption) > * > * {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* Encabezado */
+.card .table thead,
+.card .table thead tr,
+.card .table thead th {
+  background-color: transparent !important;
+  color: inherit !important;
+  border-color: var(--bs-table-border-color) !important;
+}
+
+/* Filas */
+.card .table tbody tr,
+.card .table tbody td {
+  background-color: transparent !important;
+  color: inherit !important;
+  border-color: var(--bs-table-border-color) !important;
+}
+
+/* Hover */
+.card .table-hover tbody tr:hover > * {
+  background-color: rgba(0,0,0,.03) !important;      /* claro */
+}
+body.dark .card .table-hover tbody tr:hover > * {
+  background-color: rgba(255,255,255,.06) !important; /* oscuro */
+}
+
+/* Striped */
+.card .table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: transparent !important;
+}
+
+/* Texto tenue en ambos temas */
+body .text-muted {
+  color: #6c757d !important;
+}
+body.dark .text-muted {
+  color: #ced4da !important;
+}
+
+/* ☀️🌙 Botón de cambio de tema */
+#themeToggle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  transition: background-color 0.3s, transform 0.2s;
+}
+#themeToggle:hover {
+  transform: scale(1.1);
+}
+
+/* 🔄 Círculo expansivo en el cambio de tema */
+body::before {
+  content: "";
+  position: fixed;
+  top: var(--click-y, 50%);
+  left: var(--click-x, 50%);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: var(--theme-bg, #1e1e1e);
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  pointer-events: none;
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+body.animating::before {
+  width: 200vmax;
+  height: 200vmax;
+}
