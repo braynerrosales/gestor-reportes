@@ -15,7 +15,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // Conexión a PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Necesario para Render
+  ssl: { rejectUnauthorized: false }, // Render necesita esto
 });
 
 // =================== RUTAS =================== //
@@ -23,9 +23,7 @@ const pool = new Pool({
 // Obtener todos los reportes
 app.get("/api/reports", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM reportes ORDER BY id DESC"
-    );
+    const result = await pool.query("SELECT * FROM reportes ORDER BY id DESC");
     res.json(result.rows);
   } catch (err) {
     console.error("Error al obtener reportes:", err);
@@ -36,20 +34,27 @@ app.get("/api/reports", async (req, res) => {
 // Agregar un nuevo reporte
 app.post("/api/reports", async (req, res) => {
   try {
-    const { error, fecha, solicitud, proyecto, resultado, estado } = req.body;
+    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
 
-    if (!error || !fecha || !solicitud || !proyecto) {
+    if (!reporte || !fecha || !solicitud || !proyecto) {
       return res
         .status(400)
         .json({ error: "Campos obligatorios faltantes" });
     }
 
     const query = `
-      INSERT INTO reportes (error, fecha, solicitud, proyecto, resultado, estado)
+      INSERT INTO reportes (reporte, fecha, solicitud, proyecto, resultado, estado)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-    const values = [error, fecha, solicitud, proyecto, resultado || "", estado || "Pendiente"];
+    const values = [
+      reporte,
+      fecha,
+      solicitud,
+      proyecto,
+      resultado || "",
+      estado || "Pendiente",
+    ];
 
     const result = await pool.query(query, values);
     res.status(201).json(result.rows[0]);
@@ -63,15 +68,15 @@ app.post("/api/reports", async (req, res) => {
 app.put("/api/reports/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { error, fecha, solicitud, proyecto, resultado, estado } = req.body;
+    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
 
     const query = `
       UPDATE reportes
-      SET error=$1, fecha=$2, solicitud=$3, proyecto=$4, resultado=$5, estado=$6
+      SET reporte=$1, fecha=$2, solicitud=$3, proyecto=$4, resultado=$5, estado=$6
       WHERE id=$7
       RETURNING *;
     `;
-    const values = [error, fecha, solicitud, proyecto, resultado, estado, id];
+    const values = [reporte, fecha, solicitud, proyecto, resultado, estado, id];
 
     const result = await pool.query(query, values);
 
