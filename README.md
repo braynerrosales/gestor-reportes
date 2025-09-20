@@ -1,26 +1,28 @@
-# 📊 Gestor de Reportes QA
+📊 Gestor de Reportes QA
 
-Aplicación web para la **gestión de reportes de QA**.  
-Permite **consultar, editar, eliminar y agregar reportes**, además de **exportarlos a Excel**.  
-Incluye soporte para **modo claro/oscuro** con animación radial 🌞🌙.
+Aplicación web para la gestión de reportes de QA. Permite consultar, editar, eliminar y agregar reportes, además de exportarlos a Excel. Incluye soporte para modo claro/oscuro con animación radial 🌞🌙.
 
----
+🚀 Funcionalidades
 
-## 🚀 Funcionalidades
+📑 Carga y visualización de reportes desde un dataset JSON.
 
-- 📑 Carga y visualización de reportes desde un dataset JSON.  
-- 🔍 Filtros por **Proyecto** y **Solicitud**.  
-- ✏️ Edición en línea del campo **Resultado**.  
-- 🟢 Campo de **Estado** con valores: `Pendiente`, `Reportado`, `Resuelto`.  
-- ➕ Agregar nuevos reportes.  
-- ❌ Eliminar reportes existentes.  
-- 📤 Exportar los reportes a **Excel (.xlsx)**.  
-- 🌓 Modo claro/oscuro con animación radial.  
-- 💻 Diseño responsivo y moderno con Bootstrap.  
+🔍 Filtros por Proyecto y Solicitud.
 
----
+✏️ Edición en línea del campo Resultado.
 
-## 📂 Estructura del proyecto
+🟢 Campo de Estado con valores: Pendiente, Reportado, Resuelto.
+
+➕ Agregar nuevos reportes.
+
+❌ Eliminar reportes existentes.
+
+📤 Exportar los reportes a Excel (.xlsx).
+
+🌓 Modo claro/oscuro con animación radial.
+
+💻 Diseño responsivo y moderno con Bootstrap.
+
+📂 Estructura del proyecto
 
 GESTOR-REPORTES/
 ├── public/
@@ -33,45 +35,41 @@ GESTOR-REPORTES/
 ├── package.json # Dependencias y scripts
 └── README.md # Este archivo
 
----
+⚙️ Requisitos previos
 
-## ⚙️ Requisitos previos
+Node.js (v16 o superior)
 
-- [Node.js](https://nodejs.org/) (v16 o superior)  
-- [npm](https://www.npmjs.com/)  
+npm
 
----
+📥 Instalación y ejecución local
 
-## 📥 Instalación y ejecución local
+Clona este repositorio:
+git clone https://github.com/TU-USUARIO/gestor-reportes.git
 
-1. Clona este repositorio:
-   ```bash
-   git clone https://github.com/TU-USUARIO/gestor-reportes.git
-   cd gestor-reportes
+cd gestor-reportes
+
 Instala dependencias:
-
 npm install
 
-
 Inicia el servidor:
-
-npm run dev   # con nodemon (desarrollo)
-npm start     # producción
-
+npm run dev # con nodemon (desarrollo)
+npm start # producción
 
 Abre en el navegador:
-
 http://localhost:3000
 
 🌍 Despliegue en la nube
 
 Puedes desplegar este proyecto en plataformas como:
 
-Render
+Render (https://render.com
+)
 
-Railway
+Railway (https://railway.app
+)
 
-Heroku
+Heroku (https://www.heroku.com
+)
 
 Comandos de despliegue (Render/Railway):
 
@@ -85,8 +83,7 @@ Frontend: HTML5, CSS3, JavaScript, Bootstrap 5
 
 Backend: Node.js, Express
 
-Extras: SheetJS/xlsx
- para exportar a Excel
+Extras: SheetJS/xlsx para exportar a Excel
 
 👨‍💻 Autor
 
