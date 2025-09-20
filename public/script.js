@@ -1,11 +1,10 @@
-// === Estado en memoria ===
 let rawData = [];
 let viewData = [];
 
-const $  = (sel) => document.querySelector(sel);
+const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// === API helpers ===
+// ------- API helpers -------
 async function apiGet() {
   const r = await fetch('/api/reports');
   if (!r.ok) throw new Error('No se pudo leer los reportes');
@@ -16,17 +15,17 @@ async function apiPost(record) {
   const r = await fetch('/api/reports', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record),
+    body: JSON.stringify(record)
   });
   if (!r.ok) throw new Error('No se pudo guardar el reporte');
   return await r.json();
 }
 
-async function apiPut(id, record) {
+async function apiPut(id, patch) {
   const r = await fetch(`/api/reports/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record),
+    body: JSON.stringify(patch)
   });
   if (!r.ok) throw new Error('No se pudo actualizar el reporte');
   return await r.json();
@@ -37,38 +36,7 @@ async function apiDelete(id) {
   if (!r.ok && r.status !== 204) throw new Error('No se pudo eliminar el reporte');
 }
 
-// === Utilidades ===
-function escapeHtml(str){
-  return String(str ?? "")
-    .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-}
-
-function uniqueSorted(values){
-  return [...new Set(values.filter(Boolean))].sort((a,b)=> (''+a).localeCompare((''+b),'es',{numeric:true,sensitivity:'base'}));
-}
-
-// Extrae todos los valores necesarios de una fila (para PUT completo)
-function getRowPayload(tr) {
-  const id        = tr.getAttribute('data-id');
-  const reporte   = tr.children[0].textContent.trim();
-  const fecha     = tr.children[1].textContent.trim();
-  const solicitud = tr.children[2].textContent.trim();
-  const proyecto  = tr.children[3].textContent.trim();
-  const resultado = tr.querySelector('.editable')?.innerText.trim() ?? '';
-  const estado    = tr.querySelector('.estado-select')?.value ?? 'Pendiente';
-  return { id, reporte, fecha, solicitud, proyecto, resultado, estado };
-}
-
-// Sincroniza el objeto actualizado en los arrays locales
-function updateLocalData(id, updated) {
-  const i1 = rawData.findIndex(x => String(x.id) === String(id));
-  if (i1 >= 0) rawData[i1] = updated;
-  const i2 = viewData.findIndex(x => String(x.id) === String(id));
-  if (i2 >= 0) viewData[i2] = updated;
-}
-
-// === Render de tabla ===
+// ------- UI -------
 function renderTable() {
   const tbody = $('#reportTable tbody');
   if (!viewData.length) {
@@ -89,60 +57,78 @@ function renderTable() {
         <select class="form-select form-select-sm estado-select">
           <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
           <option value="Reportado" ${r.estado === "Reportado" ? "selected" : ""}>Reportado</option>
-          <option value="Resuelto"  ${r.estado === "Resuelto"  ? "selected" : ""}>Resuelto</option>
+          <option value="Resuelto" ${r.estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
         </select>
       </td>
-      <td><button class="btn btn-sm btn-danger btn-delete">Eliminar</button></td>
+      <td>
+        <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
+      </td>
     </tr>
   `).join('');
 
-  // Editar "resultado" (blur o Enter)
+  // inline edit Resultado
   $$('#reportTable .editable').forEach((el) => {
-    el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); }});
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    });
     el.addEventListener('blur', async () => {
       const tr = el.closest('tr');
-      const payload = getRowPayload(tr);
+      const id = tr.getAttribute('data-id');
+      const value = el.innerText.trim();
       try {
-        const updated = await apiPut(payload.id, payload);
-        updateLocalData(payload.id, updated);
-      } catch (err) { alert(err.message); }
+        const updated = await apiPut(id, { resultado: value });
+        updateLocalData(id, updated);
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 
-  // Cambiar estado
+  // cambiar estado
   $$('#reportTable .estado-select').forEach((el) => {
     el.addEventListener('change', async () => {
       const tr = el.closest('tr');
-      const payload = getRowPayload(tr);
+      const id = tr.getAttribute('data-id');
+      const value = el.value;
       try {
-        const updated = await apiPut(payload.id, payload);
-        updateLocalData(payload.id, updated);
-      } catch (err) { alert(err.message); }
+        const updated = await apiPut(id, { estado: value });
+        updateLocalData(id, updated);
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 
-  // Eliminar
+  // eliminar
   $$('#reportTable .btn-delete').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const tr  = btn.closest('tr');
-      const id  = tr.getAttribute('data-id');
+      const tr = btn.closest('tr');
+      const id = tr.getAttribute('data-id');
       if (!confirm('¿Seguro que deseas eliminar este reporte?')) return;
       try {
         await apiDelete(id);
-        rawData  = rawData.filter(r => String(r.id) !== String(id));
-        viewData = viewData.filter(r => String(r.id) !== String(id));
+        rawData = rawData.filter(r => r.id !== id);
+        viewData = viewData.filter(r => r.id !== id);
         renderTable();
         populateFilters();
-      } catch (err) { alert(err.message); }
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 }
 
-// === Filtros ===
+function updateLocalData(id, updated) {
+  const idxR = rawData.findIndex(x => x.id === id);
+  if (idxR >= 0) rawData[idxR] = updated;
+  const idxV = viewData.findIndex(x => x.id === id);
+  if (idxV >= 0) viewData[idxV] = updated;
+}
+
 function populateFilters() {
-  const proyectos  = uniqueSorted(rawData.map(r => r.proyecto));
-  const solicitudes= uniqueSorted(rawData.map(r => r.solicitud));
-  $('#filterProyecto').innerHTML  = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+  const proyectos = uniqueSorted(rawData.map(r => r.proyecto));
+  const solicitudes = uniqueSorted(rawData.map(r => r.solicitud));
+  $('#filterProyecto').innerHTML = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
   $('#filterSolicitud').innerHTML = `<option value="">Todas</option>` + solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
 }
 
@@ -160,16 +146,29 @@ function resetFilters() {
   renderTable();
 }
 
-// === Agregar ===
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function uniqueSorted(values){
+  return [...new Set(values.filter(Boolean))].sort((a,b)=> (''+a).localeCompare((''+b), 'es', {numeric:true, sensitivity:'base'}));
+}
+
+// ------- Agregar -------
 async function addReport(e) {
   e.preventDefault();
   const nuevo = {
-    reporte:   $('#addReporte').value.trim(),
-    fecha:     $('#addFecha').value,
+    reporte: $('#addReporte').value.trim(),
+    fecha: $('#addFecha').value,
     solicitud: $('#addSolicitud').value.trim(),
-    proyecto:  $('#addProyecto').value.trim(),
+    proyecto: $('#addProyecto').value.trim(),
     resultado: $('#addResultado').value.trim(),
-    estado:    $('#addEstado').value
+    estado: $('#addEstado').value
   };
 
   if (!nuevo.reporte || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
@@ -184,16 +183,16 @@ async function addReport(e) {
     renderTable();
     populateFilters();
     e.target.reset();
-    $('#addEstado').value = "Pendiente";
+    $('#addEstado').value = "Pendiente"; // reset select
   } catch (err) {
     alert(err.message);
   }
 }
 
-// === Boot ===
+// ------- Boot -------
 async function boot() {
   try {
-    rawData  = await apiGet();
+    rawData = await apiGet();
     viewData = [...rawData];
     populateFilters();
     renderTable();
@@ -202,36 +201,24 @@ async function boot() {
   }
 }
 
-// === Tema claro/oscuro con animación radial ===
-function applyTheme(theme, x = null, y = null) {
-  if (x && y) {
-    document.body.style.setProperty('--click-x', `${x}px`);
-    document.body.style.setProperty('--click-y', `${y}px`);
-    document.body.classList.add('animating');
+// ------- Tema oscuro/claro -------
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.body.classList.add('dark');
+    $('#themeToggle').textContent = '🌙';
+  } else {
+    document.body.classList.remove('dark');
+    $('#themeToggle').textContent = '🌞';
   }
-  setTimeout(() => {
-    if (theme === 'dark') {
-      document.body.classList.add('dark');
-      $('#themeToggle').textContent = '🌙';
-    } else {
-      document.body.classList.remove('dark');
-      $('#themeToggle').textContent = '🌞';
-    }
-    localStorage.setItem('theme', theme);
-    document.body.classList.remove('animating');
-  }, 300);
+  localStorage.setItem('theme', theme);
 }
 
-function toggleTheme(e) {
+function toggleTheme() {
   const isDark = document.body.classList.contains('dark');
-  const theme  = isDark ? 'light' : 'dark';
-  const rect   = e.currentTarget.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top  + rect.height/ 2;
-  applyTheme(theme, x, y);
+  const theme = isDark ? 'light' : 'dark';
+  applyTheme(theme);
 }
 
-// === Listeners ===
 window.addEventListener('DOMContentLoaded', () => {
   boot();
 
@@ -239,6 +226,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#btnResetFilters').addEventListener('click', resetFilters);
   $('#addForm').addEventListener('submit', addReport);
 
+  // aplicar tema guardado o sistema
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme) {
     applyTheme(savedTheme);
@@ -246,13 +234,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     applyTheme(prefersDark ? 'dark' : 'light');
   }
+
   $('#themeToggle').addEventListener('click', toggleTheme);
 
-  // Si no hay datos, evitar export vacío
-  $('#btnExport')?.addEventListener('click', (e) => {
+  // Exportar a Excel
+  $('#btnExport').addEventListener('click', () => {
     if (!rawData.length) {
-      e.preventDefault();
       alert('No hay datos para exportar.');
+      return;
     }
+    window.location.href = '/api/export-excel';
   });
 });
