@@ -19,9 +19,9 @@ app.use(express.static('public'));
 // ------- RUTAS -------
 
 // Obtener reportes
-app.get('/api/reports', async (req, res) => {
+app.get('/api/reportes', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM reports ORDER BY fecha DESC');
+    const result = await pool.query('SELECT * FROM reportes ORDER BY fecha DESC');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -30,11 +30,11 @@ app.get('/api/reports', async (req, res) => {
 });
 
 // Agregar reporte
-app.post('/api/reports', async (req, res) => {
+app.post('/api/reportes', async (req, res) => {
   try {
     const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
     const result = await pool.query(
-      `INSERT INTO reports (reporte, fecha, solicitud, proyecto, resultado, estado)
+      `INSERT INTO reportes (reporte, fecha, solicitud, proyecto, resultado, estado)
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
       [reporte, fecha, solicitud, proyecto, resultado, estado]
     );
@@ -46,12 +46,12 @@ app.post('/api/reports', async (req, res) => {
 });
 
 // Actualizar reporte
-app.put('/api/reports/:id', async (req, res) => {
+app.put('/api/reportes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
     const result = await pool.query(
-      `UPDATE reports
+      `UPDATE reportes
        SET reporte=$1, fecha=$2, solicitud=$3, proyecto=$4, resultado=$5, estado=$6
        WHERE id=$7 RETURNING *`,
       [reporte, fecha, solicitud, proyecto, resultado, estado, id]
@@ -64,10 +64,10 @@ app.put('/api/reports/:id', async (req, res) => {
 });
 
 // Eliminar reporte
-app.delete('/api/reports/:id', async (req, res) => {
+app.delete('/api/reportes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM reports WHERE id=$1', [id]);
+    await pool.query('DELETE FROM reportes WHERE id=$1', [id]);
     res.sendStatus(204);
   } catch (err) {
     console.error(err);
@@ -78,7 +78,7 @@ app.delete('/api/reports/:id', async (req, res) => {
 // Exportar a Excel
 app.get('/api/export-excel', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM reports ORDER BY fecha DESC');
+    const result = await pool.query('SELECT * FROM reportes ORDER BY fecha DESC');
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Reportes');
