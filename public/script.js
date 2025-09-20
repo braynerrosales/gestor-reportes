@@ -159,15 +159,6 @@ function uniqueSorted(values){
   return [...new Set(values.filter(Boolean))].sort((a,b)=> (''+a).localeCompare((''+b), 'es', {numeric:true, sensitivity:'base'}));
 }
 
-// ------- Exportar a Excel -------
-function exportExcel() {
-  if (!rawData.length) return alert('No hay datos para exportar.');
-  const ws = XLSX.utils.json_to_sheet(rawData.map(({id, ...r}) => r)); // quitar id en Excel
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Reportes");
-  XLSX.writeFile(wb, "reportes_QA.xlsx");
-}
-
 // ------- Agregar -------
 async function addReport(e) {
   e.preventDefault();
@@ -245,7 +236,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   $('#filterForm').addEventListener('submit', e => { e.preventDefault(); applyFilters(); });
   $('#btnResetFilters').addEventListener('click', resetFilters);
-  $('#btnExport').addEventListener('click', exportExcel);
   $('#addForm').addEventListener('submit', addReport);
 
   // aplicar tema guardado o sistema
@@ -258,4 +248,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   $('#themeToggle').addEventListener('click', toggleTheme);
+
+  // Si no hay datos, avisa antes de exportar
+  $('#btnExport').addEventListener('click', (e) => {
+    if (!rawData.length) {
+      e.preventDefault();
+      alert('No hay datos para exportar.');
+    }
+  });
 });

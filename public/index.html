@@ -10,12 +10,12 @@
 </head>
 <body>
   <header class="container py-4 d-flex justify-content-between align-items-center">
-  <div>
-    <h1 class="mb-1">Gestión de Errores QA</h1>
-    <p class="text-muted">Consulta, edita, elimina y agrega reportes. Exporta a Excel.</p>
-  </div>
-  <button id="themeToggle" class="btn btn-outline-secondary fs-4" aria-label="Cambiar tema">🌞</button>
-</header>
+    <div>
+      <h1 class="mb-1">Gestión de Errores QA</h1>
+      <p class="text-muted">Consulta, edita, elimina y agrega reportes. Exporta a Excel.</p>
+    </div>
+    <button id="themeToggle" class="btn btn-outline-secondary fs-4" aria-label="Cambiar tema">🌞</button>
+  </header>
 
   <main class="container pb-5">
     <!-- Agregar -->
@@ -87,7 +87,8 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 class="h5 mb-0">Reportes</h2>
-          <button id="btnExport" class="btn btn-success">Exportar a Excel</button>
+          <!-- Ahora exporta desde el backend -->
+          <a id="btnExport" href="/api/export-excel" class="btn btn-success">Exportar a Excel</a>
         </div>
 
         <div class="table-responsive">
@@ -114,7 +115,7 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  <!-- Ya no usamos SheetJS en frontend, lo genera el backend -->
   <script src="script.js"></script>
 </body>
 </html>

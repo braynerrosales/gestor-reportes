@@ -1,9 +1,10 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
+const XLSX = require('xlsx');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const DATA_PATH = path.join(__dirname, 'data.json');
 const DATA_JS_PATH = path.join(__dirname, 'public', 'data.js'); // espejo opcional
@@ -28,6 +29,7 @@ async function persistData(data) {
   const json = JSON.stringify(data, null, 2);
   await fs.writeFile(DATA_PATH, json, 'utf-8');
 
+  // (Opcional) mantener un espejo JS para usos externos
   const jsContent = 'let DATA = ' + json + ';\n';
   await fs.writeFile(DATA_JS_PATH, jsContent, 'utf-8');
 }
@@ -41,7 +43,7 @@ function validateRecord(r) {
   return required.every(k => r[k] && String(r[k]).trim() !== "");
 }
 
-// ---------- API ----------
+// ---------- API CRUD ----------
 app.get('/api/reports', async (_req, res) => {
   try {
     const data = await readData();
@@ -113,6 +115,41 @@ app.delete('/api/reports/:id', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'No se pudo eliminar el reporte' });
+  }
+});
+
+// ---------- Exportar Excel desde backend ----------
+app.get('/api/export-excel', async (_req, res) => {
+  try {
+    const data = await readData();
+    // opcional: quitar el id del archivo Excel
+    const rows = data.map(({ id, ...rest }) => rest);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reportes");
+
+    // Generar buffer para enviar sin escribir archivo temporal
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="reportes_QA.xlsx"');
+    res.send(buf);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'No se pudo generar el Excel' });
+  }
+});
+
+// ---------- (Opcional) Descargar data.js ya armado ----------
+app.get('/api/download/data.js', async (_req, res) => {
+  try {
+    const data = await readData();
+    const js = 'let DATA = ' + JSON.stringify(data, null, 2) + ';\n';
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="data.js"');
+    res.send(js);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'No se pudo generar data.js' });
   }
 });
 
