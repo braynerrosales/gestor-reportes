@@ -1,31 +1,19 @@
 {
   "name": "gestor-reportes-qa",
   "version": "1.0.0",
-  "description": "Aplicación web para la gestión de reportes de QA con Node.js, Express y frontend responsivo.",
+  "description": "Gestor de reportes QA con Node.js, Express y PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [
-    "QA",
-    "reportes",
-    "nodejs",
-    "express",
-    "excel",
-    "frontend"
-  ],
-  "author": "Brayner",
-  "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
     "body-parser": "^1.20.2",
-    "fs-extra": "^11.2.0"
+    "dotenv": "^16.3.1",
+    "express": "^4.19.2",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
-  },
-  "engines": {
-    "node": ">=16.x"
   }
 }
