@@ -126,13 +126,13 @@ app.get('/api/reportes', authMiddleware, async (req, res) => {
 // Agregar
 app.post('/api/reportes', authMiddleware, async (req, res) => {
   try {
-    const { error, fecha, solicitud, proyecto, resultado, estado } = req.body;
+    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
     const result = await pool.query(
-      `INSERT INTO reportes (error, fecha, solicitud, proyecto, resultado, estado, usuario_id)
+      `INSERT INTO reportes (reporte, fecha, solicitud, proyecto, resultado, estado, usuario_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [error, fecha, solicitud, proyecto, resultado, estado, req.user.id]
+      [reporte, fecha, solicitud, proyecto, resultado, estado, req.user.id]
     );
-    await logAction(req.user.username, `Agregó nuevo reporte (${error})`, '/api/reportes');
+    await logAction(req.user.username, `Agregó nuevo reporte (${reporte})`, '/api/reportes');
     res.json(result.rows[0]);
   } catch (err) {
     await logError(req.user?.username, err.message, '/api/reportes');
