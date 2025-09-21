@@ -195,10 +195,16 @@ app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
 app.delete('/api/reportes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM reportes WHERE id=$1', [id]);
+    console.log(`[DELETE] Intentando eliminar reporte con id: ${id}`);
+    const result = await pool.query('DELETE FROM reportes WHERE id=$1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      await logAction(req.user.username, `Intento fallido de eliminar reporte inexistente (${id})`, '/api/reportes');
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
     await logAction(req.user.username, `Eliminó reporte ${id}`, '/api/reportes');
     res.sendStatus(204);
   } catch (err) {
+    console.error('Error al eliminar reporte:', err);
     await logError(req.user?.username, err.message, '/api/reportes');
     res.status(500).json({ error: 'Error al eliminar reporte' });
   }
