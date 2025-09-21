@@ -1,121 +1,27 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestión de Errores QA</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="styles.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Login - Gestor de Reportes</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="container py-4 d-flex justify-content-between align-items-center">
-    <div>
-      <h1 class="mb-1">Gestión de Errores QA</h1>
-      <p class="text-muted">Consulta, edita, elimina y agrega reportes. Exporta a Excel.</p>
-    </div>
-    <button id="themeToggle" class="btn btn-outline-secondary fs-4" aria-label="Cambiar tema">🌞</button>
-  </header>
-
-  <main class="container pb-5">
-    <!-- Agregar -->
-    <section class="card shadow-sm mb-4">
-      <div class="card-body">
-        <h2 class="h5">Agregar reporte</h2>
-        <form id="addForm" class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Reporte (Error)</label>
-            <input type="text" id="addReporte" class="form-control" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Fecha</label>
-            <input type="date" id="addFecha" class="form-control" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Solicitud</label>
-            <input type="text" id="addSolicitud" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Proyecto</label>
-            <input type="text" id="addProyecto" class="form-control" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Resultado</label>
-            <input type="text" id="addResultado" class="form-control">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">Estado</label>
-            <select id="addEstado" class="form-select">
-              <option value="Pendiente" selected>Pendiente</option>
-              <option value="Reportado">Reportado</option>
-              <option value="Resuelto">Resuelto</option>
-            </select>
-          </div>
-          <div class="col-12">
-            <button type="submit" class="btn btn-primary">Agregar</button>
-          </div>
-        </form>
+  <div class="login-container">
+    <h1>Gestor de Reportes</h1>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" required>
       </div>
-    </section>
-
-    <!-- Filtros -->
-    <section class="card shadow-sm mb-4">
-      <div class="card-body">
-        <form id="filterForm" class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Proyecto</label>
-            <select id="filterProyecto" class="form-select">
-              <option value="">Todos</option>
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Solicitud</label>
-            <select id="filterSolicitud" class="form-select">
-              <option value="">Todas</option>
-            </select>
-          </div>
-          <div class="col-12 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-            <button type="button" id="btnResetFilters" class="btn btn-light border">Reiniciar</button>
-          </div>
-        </form>
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required>
       </div>
-    </section>
+      <button type="submit">Ingresar</button>
+    </form>
+    <p id="loginError" class="error"></p>
+  </div>
 
-    <!-- Tabla -->
-    <section class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h2 class="h5 mb-0">Reportes</h2>
-          <!-- Ahora exporta desde el backend -->
-          <a id="btnExport" href="/api/export-excel" class="btn btn-success">Exportar a Excel</a>
-        </div>
-
-        <div class="table-responsive">
-          <table id="reportTable" class="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th>Reporte (Error)</th>
-                <th>Fecha</th>
-                <th>Solicitud</th>
-                <th>Proyecto</th>
-                <th>Resultado (editable)</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <p id="emptyState" class="text-center text-muted my-4 d-none">
-          No hay datos cargados.
-        </p>
-      </div>
-    </section>
-  </main>
-
-  <!-- Ya no usamos SheetJS en frontend, lo genera el backend -->
   <script src="script.js"></script>
 </body>
 </html>
