@@ -6,15 +6,22 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 // ------- API helpers -------
 async function apiGet() {
-  const r = await fetch('/api/reportes');
+  const token = localStorage.getItem("token");
+  const r = await fetch('/api/reportes', {
+    headers: { "Authorization": "Bearer " + token }
+  });
   if (!r.ok) throw new Error('No se pudo leer los reportes');
   return await r.json();
 }
 
 async function apiPost(record) {
+  const token = localStorage.getItem("token");
   const r = await fetch('/api/reportes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(record)
   });
   if (!r.ok) throw new Error('No se pudo guardar el reporte');
@@ -22,9 +29,13 @@ async function apiPost(record) {
 }
 
 async function apiPut(id, patch) {
+  const token = localStorage.getItem("token");
   const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(patch)
   });
   if (!r.ok) throw new Error('No se pudo actualizar el reporte');
@@ -32,7 +43,11 @@ async function apiPut(id, patch) {
 }
 
 async function apiDelete(id) {
-  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const token = localStorage.getItem("token");
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { "Authorization": "Bearer " + token }
+  });
   if (!r.ok && r.status !== 204) throw new Error('No se pudo eliminar el reporte');
 }
 
@@ -60,9 +75,7 @@ function renderTable() {
           <option value="Resuelto" ${r.estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
         </select>
       </td>
-      <td>
-        <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
-      </td>
+      <td><button class="btn btn-sm btn-danger btn-delete">Eliminar</button></td>
     </tr>
   `).join('');
 
@@ -107,8 +120,8 @@ function renderTable() {
       if (!confirm('¿Seguro que deseas eliminar este reporte?')) return;
       try {
         await apiDelete(id);
-        rawData = rawData.filter(r => r.id !== id);
-        viewData = viewData.filter(r => r.id !== id);
+        rawData = rawData.filter(r => String(r.id) !== String(id));
+        viewData = viewData.filter(r => String(r.id) !== String(id));
         renderTable();
         populateFilters();
       } catch (err) {
@@ -119,9 +132,9 @@ function renderTable() {
 }
 
 function updateLocalData(id, updated) {
-  const idxR = rawData.findIndex(x => x.id === id);
+  const idxR = rawData.findIndex(x => String(x.id) === String(id));
   if (idxR >= 0) rawData[idxR] = updated;
-  const idxV = viewData.findIndex(x => x.id === id);
+  const idxV = viewData.findIndex(x => String(x.id) === String(id));
   if (idxV >= 0) viewData[idxV] = updated;
 }
 
@@ -226,7 +239,6 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#btnResetFilters').addEventListener('click', resetFilters);
   $('#addForm').addEventListener('submit', addReport);
 
-  // aplicar tema guardado o sistema
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme) {
     applyTheme(savedTheme);
@@ -234,20 +246,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     applyTheme(prefersDark ? 'dark' : 'light');
   }
-
   $('#themeToggle').addEventListener('click', toggleTheme);
 
-  // Exportar a Excel
+  // Exportar a Excel con token
   $('#btnExport').addEventListener('click', () => {
-    if (!rawData.length) {
-      alert('No hay datos para exportar.');
-      return;
-    }
-    window.location.href = '/api/export-excel';
-  });
+  if (!rawData.length) {
+    alert('No hay datos para exportar.');
+    return;
+  }
+  const token = localStorage.getItem("token");
+  window.location.href = `/api/export-excel?token=${token}`;
 });
 
-const token = localStorage.getItem('token');
-const r = await fetch('/api/reportes', {
-  headers: { 'Authorization': 'Bearer ' + token }
 });

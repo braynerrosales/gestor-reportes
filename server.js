@@ -1,3 +1,4 @@
+//require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -35,13 +36,26 @@ async function logAction(usuario, accion, endpoint) {
 
 // ================== MIDDLEWARE ==================
 function authMiddleware(req, res, next) {
-  const header = req.headers['authorization'];
-  if (!header) return res.status(401).json({ error: 'Token requerido' });
+  let token;
 
-  const token = header.split(' ')[1];
+  // 1. Revisar header Authorization
+  const header = req.headers['authorization'];
+  if (header) {
+    token = header.split(' ')[1];
+  }
+
+  // 2. Si no hay header, revisar query string ?token=
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token requerido' });
+  }
+
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded; // Guardamos datos del usuario
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Token inválido o expirado' });
