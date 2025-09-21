@@ -307,3 +307,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+$$('#reportTable td').forEach(td => {
+  td.setAttribute('title', td.innerText);
+});

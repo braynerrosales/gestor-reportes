@@ -86,3 +86,14 @@ body.dark textarea {
 #logoutBtn:hover {
   background-color: #bb2d3b;
 }
+
+/* -------------------------
+   Mostrar todo el texto en Reporte y Resultado
+------------------------- */
+#reportTable td:nth-child(1),  /* Columna Reporte */
+#reportTable td:nth-child(5) { /* Columna Resultado */
+  white-space: normal;     /* Permite saltos de línea */
+  word-break: break-word;  /* Rompe palabras largas */
+  vertical-align: top;     /* Alinea arriba si el texto es largo */
+  max-width: 400px;        /* Ajusta el ancho máximo */
+}
