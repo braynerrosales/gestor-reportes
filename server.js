@@ -74,43 +74,43 @@ function authMiddleware(req, res, next) {
 // ================== AUTH ==================
 // Registro
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { nombre, email, password } = req.body;
   try {
-    if (!username || !password) return res.status(400).send('Faltan datos');
+    if (!nombre || !email || !password) return res.status(400).send('Faltan datos');
     const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
+    const passwordHash = await bcrypt.hash(password, salt);
     const result = await pool.query(
-      'INSERT INTO usuarios (username, password_hash) VALUES ($1, $2) RETURNING id, username',
-      [username, password_hash]
+      'INSERT INTO usuarios (nombre, email, password) VALUES ($1, $2, $3) RETURNING id, nombre, email',
+      [nombre, email, passwordHash]
     );
-    await logAction(username, 'Registro de usuario', '/api/register');
+    await logAction(nombre, 'Registro de usuario', '/api/register');
     res.json(result.rows[0]);
   } catch (err) {
-    await logError(username, err.message, '/api/register');
+    await logError(nombre, err.message, '/api/register');
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });
 
 // Login
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   try {
-    const result = await pool.query('SELECT * FROM usuarios WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
     if (result.rows.length === 0) {
       await logAction(null, 'Intento fallido de login', '/api/login');
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
     const user = result.rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      await logAction(user.username, 'Contraseña incorrecta', '/api/login');
+      await logAction(user.nombre, 'Contraseña incorrecta', '/api/login');
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
-    const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '2h' });
-    await logAction(user.username, 'Ingreso exitoso', '/api/login');
+    const token = jwt.sign({ id: user.id, nombre: user.nombre, email: user.email }, SECRET_KEY, { expiresIn: '2h' });
+    await logAction(user.nombre, 'Ingreso exitoso', '/api/login');
     res.json({ token });
   } catch (err) {
-    await logError(username, err.message, '/api/login');
+    await logError(email, err.message, '/api/login');
     res.status(500).json({ error: 'Error en login' });
   }
 });
