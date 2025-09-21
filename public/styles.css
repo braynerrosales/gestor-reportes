@@ -1,203 +1,193 @@
-/* 🔄 Transiciones suaves */
-body, .card, .table, .form-control, .form-select, .editable, header, .btn {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+:root {
+  --bg-light: #f5f5f5;
+  --bg-dark: #121212;
+  --card-light: #ffffff;
+  --card-dark: #1e1e1e;
+  --text-light: #111111;
+  --text-dark: #f5f5f5;
+  --primary: #00bfff;
+  --primary-hover: #009acd;
 }
 
-/* 🌞 Tema claro */
+/* -------------------------
+   General
+------------------------- */
 body {
-  --theme-bg: #f8fafc;
-  background-color: #f8fafc;
-  color: #212529;
-  overflow-x: hidden;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-light);
+  transition: background 0.3s, color 0.3s;
 }
 
-h1 {
-  font-weight: 700;
-}
-
-.table td, .table th {
-  vertical-align: middle;
-}
-
-/* Celdas editables */
-.editable {
-  background-color: #fff;
-  border: 1px dashed #ccc;
-  border-radius: 6px;
-  padding: 4px 6px;
-  min-height: 30px;
-}
-
-.editable:focus {
-  border-color: #0d6efd;
-  outline: none;
-  box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
-}
-
-/* 🌙 Tema oscuro */
 body.dark {
-  --theme-bg: #1e1e1e;
-  background-color: #1e1e1e;
-  color: #f1f3f5;
-}
-
-/* Tarjetas */
-body.dark .card {
-  background-color: #2a2a2a;
-  color: #f1f3f5;
-  border-color: #444;
-}
-
-/* Inputs y selects */
-body.dark .form-control,
-body.dark .form-select,
-body.dark .editable {
-  background-color: #3a3a3a;
-  color: #f1f3f5;
-  border: 1px solid #666;
-}
-
-body.dark .form-control::placeholder,
-body.dark .editable::placeholder {
-  color: #bbb;
-}
-
-body.dark .form-control:focus,
-body.dark .form-select:focus,
-body.dark .editable:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 .2rem rgba(13,110,253,.25);
-}
-
-/* === TABLA integrada con el card (claro y oscuro) === */
-
-/* Variables de fondo para cards */
-:root { --card-bg-light: #ffffff; }
-body.dark { --card-bg-dark: #2a2a2a; }
-
-body:not(.dark) .card { --card-bg: var(--card-bg-light); }
-body.dark .card { --card-bg: var(--card-bg-dark); }
-
-/* La tabla hereda el fondo del card y neutraliza fondos de Bootstrap */
-.card .table {
-  background-color: transparent !important;
-  --bs-table-bg: transparent !important;
-  --bs-table-color: inherit !important;
-  --bs-table-border-color: rgba(0,0,0,.125);
-}
-
-body.dark .card .table {
-  --bs-table-border-color: #444;
-}
-
-/* Celdas y encabezados transparentes */
-.card .table > :not(caption) > * > * {
-  background-color: transparent !important;
-  color: inherit !important;
-}
-
-/* Encabezado */
-.card .table thead,
-.card .table thead tr,
-.card .table thead th {
-  background-color: transparent !important;
-  color: inherit !important;
-  border-color: var(--bs-table-border-color) !important;
-}
-
-/* Filas */
-.card .table tbody tr,
-.card .table tbody td {
-  background-color: transparent !important;
-  color: inherit !important;
-  border-color: var(--bs-table-border-color) !important;
-}
-
-/* Hover */
-.card .table-hover tbody tr:hover > * {
-  background-color: rgba(0,0,0,.03) !important;      /* claro */
-}
-body.dark .card .table-hover tbody tr:hover > * {
-  background-color: rgba(255,255,255,.06) !important; /* oscuro */
-}
-
-/* Striped (neutralizado) */
-.card .table-striped > tbody > tr:nth-of-type(odd) > * {
-  background-color: transparent !important;
-}
-
-/* Texto tenue */
-body .text-muted {
-  color: #6c757d !important;
-}
-body.dark .text-muted {
-  color: #ced4da !important;
-}
-
-/* ☀️🌙 Botón de cambio de tema */
-#themeToggle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  transition: background-color 0.3s, transform 0.2s;
-}
-#themeToggle:hover {
-  transform: scale(1.1);
-}
-
-/* 🔄 Círculo expansivo del cambio de tema */
-body::before {
-  content: "";
-  position: fixed;
-  top: var(--click-y, 50%);
-  left: var(--click-x, 50%);
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: var(--theme-bg, #1e1e1e);
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-  pointer-events: none;
-  transition: width 0.6s ease, height 0.6s ease;
-}
-body.animating::before {
-  width: 200vmax;
-  height: 200vmax;
-}
-
-/* Forzar tema oscuro/claro sobre Bootstrap */
-body {
   background-color: var(--bg-dark) !important;
   color: var(--text-dark) !important;
 }
 
-body.light {
-  background-color: var(--bg-light) !important;
-  color: var(--text-light) !important;
+/* -------------------------
+   Header
+------------------------- */
+header h1 {
+  font-weight: bold;
 }
 
-/* Botones personalizados */
-#logoutBtn {
-  background-color: #dc3545 !important;
-  border-color: #dc3545 !important;
-  color: #fff !important;
+header p {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
+/* Botón de tema */
 #themeToggle {
-  border: 1px solid var(--primary) !important;
-  color: var(--primary) !important;
+  background: none;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-/* Tabla coherente con tu estilo */
-.table {
+#themeToggle:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* -------------------------
+   Tablas
+------------------------- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+/* Tabla modo oscuro */
+body.dark table {
   background-color: var(--card-dark) !important;
   color: var(--text-dark) !important;
 }
-body.light .table {
-  background-color: var(--card-light) !important;
-  color: var(--text-light) !important;
+
+body.dark .table th,
+body.dark .table td {
+  background-color: var(--card-dark) !important;
+  color: var(--text-dark) !important;
+  border-color: #333 !important;
+}
+
+/* -------------------------
+   Formularios
+------------------------- */
+input, select, textarea {
+  background-color: #fff;
+  color: var(--text-light);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  transition: background 0.3s, color 0.3s, border 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Formularios en modo oscuro */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background-color: #2a2a2a !important;
+  color: var(--text-dark) !important;
+  border: 1px solid #444 !important;
+}
+
+/* -------------------------
+   Botones
+------------------------- */
+.btn {
+  border-radius: 6px !important;
+  transition: background 0.3s, color 0.3s, border 0.3s;
+}
+
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+
+.btn-secondary {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268 !important;
+}
+
+.btn-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+}
+
+.btn-danger:hover {
+  background-color: #c82333 !important;
+  border-color: #bd2130 !important;
+}
+
+/* Botones modo oscuro */
+body.dark .btn {
+  color: #fff !important;
+}
+
+body.dark .btn-secondary {
+  background-color: #444 !important;
+  border-color: #444 !important;
+}
+
+body.dark .btn-secondary:hover {
+  background-color: #555 !important;
+}
+
+/* -------------------------
+   Exportar Excel
+------------------------- */
+#btnExport {
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+}
+
+#btnExport:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* -------------------------
+   Estados select
+------------------------- */
+.estado-select {
+  min-width: 120px;
+}
+
+/* -------------------------
+   Logout
+------------------------- */
+#logoutBtn {
+  border: 1px solid #dc3545;
+  color: #fff;
+}
+
+#logoutBtn:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+#logoutBtn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.5);
+  outline: none;
 }
