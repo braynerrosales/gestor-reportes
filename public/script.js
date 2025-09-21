@@ -63,65 +63,67 @@ function renderTable() {
 
   tbody.innerHTML = viewData.map(r => `
     <tr data-id="${r.id}">
-      <td>${escapeHtml(r.reporte)}</td>
-      <td>${escapeHtml(r.fecha)}</td>
-      <td>${escapeHtml(r.solicitud)}</td>
-      <td>${escapeHtml(r.proyecto)}</td>
-      <td><div class="editable" contenteditable="true">${escapeHtml(r.resultado || "")}</div></td>
+      <td>${escapeHtml(r["Reporte (Error)"])}</td>
+      <td>${escapeHtml(r["Fecha"])}</td>
+      <td>${escapeHtml(r["Solicitud"])}</td>
+      <td>${escapeHtml(r["Proyecto"])}</td>
+      <td>
+        <input type="text" class="form-control resultado-input" value="${escapeHtml(r["Resultado"] || "")}">
+      </td>
       <td>
         <select class="form-select form-select-sm estado-select">
-          <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
-          <option value="Reportado" ${r.estado === "Reportado" ? "selected" : ""}>Reportado</option>
-          <option value="Resuelto" ${r.estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
+          <option value="Pendiente" ${r.Estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
+          <option value="Reportado" ${r.Estado === "Reportado" ? "selected" : ""}>Reportado</option>
+          <option value="Resuelto" ${r.Estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
         </select>
       </td>
-      <td><button class="btn btn-sm btn-danger btn-delete">Eliminar</button></td>
+      <td>
+        <button class="btn btn-sm btn-success btn-save" disabled title="Guardar cambios">➤</button>
+        <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
+      </td>
     </tr>
   `).join('');
 
-  // inline edit Resultado
-  $$('#reportTable .editable').forEach((el) => {
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
-    });
-    el.addEventListener('blur', async () => {
+  // Detectar cambios en inputs/selects para habilitar botón guardar
+  $$('#reportTable .resultado-input, #reportTable .estado-select').forEach(el => {
+    el.addEventListener('input', () => {
       const tr = el.closest('tr');
+      tr.querySelector('.btn-save').disabled = false;
+    });
+    el.addEventListener('change', () => {
+      const tr = el.closest('tr');
+      tr.querySelector('.btn-save').disabled = false;
+    });
+  });
+
+  // Guardar cambios
+  $$('#reportTable .btn-save').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
-      const value = el.innerText.trim();
+      const newResultado = tr.querySelector('.resultado-input').value.trim();
+      const newEstado = tr.querySelector('.estado-select').value;
+
       try {
-        const updated = await apiPut(id, { resultado: value });
+        const updated = await apiPut(id, { Resultado: newResultado, Estado: newEstado });
         updateLocalData(id, updated);
+        btn.disabled = true; // deshabilitar otra vez
       } catch (err) {
         alert(err.message);
       }
     });
   });
 
-  // cambiar estado
-  $$('#reportTable .estado-select').forEach((el) => {
-    el.addEventListener('change', async () => {
-      const tr = el.closest('tr');
-      const id = tr.getAttribute('data-id');
-      const value = el.value;
-      try {
-        const updated = await apiPut(id, { estado: value });
-        updateLocalData(id, updated);
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-  });
-
-  // eliminar
-  $$('#reportTable .btn-delete').forEach((btn) => {
+  // Eliminar
+  $$('#reportTable .btn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
       if (!confirm('¿Seguro que deseas eliminar este reporte?')) return;
       try {
         await apiDelete(id);
-        rawData = rawData.filter(r => String(r.id) !== String(id));
-        viewData = viewData.filter(r => String(r.id) !== String(id));
+        rawData = rawData.filter(r => r.id !== id);
+        viewData = viewData.filter(r => r.id !== id);
         renderTable();
         populateFilters();
       } catch (err) {
