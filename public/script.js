@@ -157,24 +157,46 @@ function updateLocalData(id, updated) {
 }
 
 function populateFilters() {
-  const proyectos = uniqueSorted(rawData.map(r => r.proyecto));
-  const solicitudes = uniqueSorted(rawData.map(r => r.solicitud));
-  $('#filterProyecto').innerHTML = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
-  $('#filterSolicitud').innerHTML = `<option value="">Todas</option>` + solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
+  const proyectos = uniqueSorted(viewData.map(r => r.proyecto));
+  const solicitudes = uniqueSorted(viewData.map(r => r.solicitud));
+
+  $('#filterProyecto').innerHTML =
+    `<option value="">Todos</option>` +
+    proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+
+  $('#filterSolicitud').innerHTML =
+    `<option value="">Todas</option>` +
+    solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
 }
 
 function applyFilters() {
   const p = $('#filterProyecto').value.trim();
   const s = $('#filterSolicitud').value.trim();
-  viewData = rawData.filter(r => (!p || r.proyecto === p) && (!s || r.solicitud === s));
+  const fInicio = $('#filterFechaInicio').value;
+  const fFin = $('#filterFechaFin').value;
+
+  viewData = rawData.filter(r => {
+    const matchProyecto = !p || r.proyecto === p;
+    const matchSolicitud = !s || r.solicitud === s;
+    const matchFecha =
+      (!fInicio || new Date(r.fecha) >= new Date(fInicio)) &&
+      (!fFin || new Date(r.fecha) <= new Date(fFin));
+
+    return matchProyecto && matchSolicitud && matchFecha;
+  });
+
   renderTable();
+  populateFilters();
 }
 
 function resetFilters() {
   $('#filterProyecto').value = '';
   $('#filterSolicitud').value = '';
+  $('#filterFechaInicio').value = '';
+  $('#filterFechaFin').value = '';
   viewData = [...rawData];
   renderTable();
+  populateFilters();
 }
 
 function escapeHtml(str){
@@ -194,7 +216,7 @@ function uniqueSorted(values){
 async function addReport(e) {
   e.preventDefault();
   const nuevo = {
-    error: $('#addReporte').value.trim(),
+    reporte: $('#addReporte').value.trim(),
     fecha: $('#addFecha').value,
     solicitud: $('#addSolicitud').value.trim(),
     proyecto: $('#addProyecto').value.trim(),
@@ -202,7 +224,7 @@ async function addReport(e) {
     estado: $('#addEstado').value
   };
 
-  if (!nuevo.error || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
+  if (!nuevo.reporte || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
     alert("Todos los campos excepto Resultado son obligatorios.");
     return;
   }
