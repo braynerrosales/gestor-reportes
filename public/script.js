@@ -63,11 +63,13 @@ function renderTable() {
 
   tbody.innerHTML = viewData.map(r => `
     <tr data-id="${r.id}">
-      <td>${escapeHtml(r.reporte)}</td>
+      <td>${escapeHtml(r.error)}</td>
       <td>${escapeHtml(r.fecha)}</td>
       <td>${escapeHtml(r.solicitud)}</td>
       <td>${escapeHtml(r.proyecto)}</td>
-      <td><div class="editable" contenteditable="true">${escapeHtml(r.resultado || "")}</div></td>
+      <td>
+        <input type="text" class="form-control resultado-input" value="${escapeHtml(r.resultado || "")}">
+      </td>
       <td>
         <select class="form-select form-select-sm estado-select">
           <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
@@ -82,30 +84,43 @@ function renderTable() {
     </tr>
   `).join('');
 
-  // Detectar cambios en inputs/selects para habilitar botón guardar
-  $$('#reportTable .resultado-input, #reportTable .estado-select').forEach(el => {
+  // Detectar cambios en Resultado para habilitar botón guardar
+  $$('#reportTable .resultado-input').forEach(el => {
     el.addEventListener('input', () => {
-      const tr = el.closest('tr');
-      tr.querySelector('.btn-save').disabled = false;
-    });
-    el.addEventListener('change', () => {
       const tr = el.closest('tr');
       tr.querySelector('.btn-save').disabled = false;
     });
   });
 
-  // Guardar cambios
+  // Guardar Resultado con botón
   $$('#reportTable .btn-save').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
       const newResultado = tr.querySelector('.resultado-input').value.trim();
-      const newEstado = tr.querySelector('.estado-select').value;
+      const estado = tr.querySelector('.estado-select').value;
 
       try {
-        const updated = await apiPut(id, { Resultado: newResultado, Estado: newEstado });
+        const updated = await apiPut(id, { resultado: newResultado, estado });
         updateLocalData(id, updated);
         btn.disabled = true; // deshabilitar otra vez
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  // Actualizar Estado automáticamente al cambiar
+  $$('#reportTable .estado-select').forEach(select => {
+    select.addEventListener('change', async () => {
+      const tr = select.closest('tr');
+      const id = tr.getAttribute('data-id');
+      const newResultado = tr.querySelector('.resultado-input').value.trim();
+      const estado = select.value;
+
+      try {
+        const updated = await apiPut(id, { resultado: newResultado, estado });
+        updateLocalData(id, updated);
       } catch (err) {
         alert(err.message);
       }
@@ -176,7 +191,7 @@ function uniqueSorted(values){
 async function addReport(e) {
   e.preventDefault();
   const nuevo = {
-    reporte: $('#addReporte').value.trim(),
+    error: $('#addReporte').value.trim(),
     fecha: $('#addFecha').value,
     solicitud: $('#addSolicitud').value.trim(),
     proyecto: $('#addProyecto').value.trim(),
@@ -184,7 +199,7 @@ async function addReport(e) {
     estado: $('#addEstado').value
   };
 
-  if (!nuevo.reporte || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
+  if (!nuevo.error || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
     alert("Todos los campos excepto Resultado son obligatorios.");
     return;
   }
@@ -250,12 +265,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Exportar a Excel con token
   $('#btnExport').addEventListener('click', () => {
-  if (!rawData.length) {
-    alert('No hay datos para exportar.');
-    return;
-  }
-  const token = localStorage.getItem("token");
-  window.location.href = `/api/export-excel?token=${token}`;
-});
+    if (!rawData.length) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+    const token = localStorage.getItem("token");
+    window.location.href = `/api/export-excel?token=${token}`;
+  });
 
+  // Logout
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "/index.html";
+    });
+  }
 });
