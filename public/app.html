@@ -24,7 +24,7 @@
       <div class="card-body">
         <form id="addForm" class="row g-2">
           <div class="col-md-6">
-            <label class="form-label">Reporte (Error)</label>
+            <label class="form-label">Reporte</label>
             <input type="text" id="addReporte" class="form-control">
           </div>
           <div class="col-md-3">
@@ -74,6 +74,11 @@
               <option value="">Todas</option>
             </select>
           </div>
+          <label for="filterFechaInicio">Desde</label>
+          <input type="date" id="filterFechaInicio">
+
+          <label for="filterFechaFin">Hasta</label>
+          <input type="date" id="filterFechaFin">
           <div class="col-12">
             <button class="btn btn-primary">Filtrar</button>
             <button type="button" id="btnResetFilters" class="btn btn-secondary">Reiniciar</button>
