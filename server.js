@@ -1,3 +1,4 @@
+//require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -55,13 +56,17 @@ function authMiddleware(req, res, next) {
   if (!token && req.query.token) {
     token = req.query.token;
   }
-  if (!token) return res.status(401).json({ error: 'Token requerido' });
+  if (!token) {
+    logError(null, 'Token requerido', req.originalUrl);
+    return res.status(401).json({ error: 'Token requerido' });
+  }
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
     req.user = decoded;
     next();
   } catch (err) {
+    logError(null, 'Token inválido o expirado', req.originalUrl);
     return res.status(403).json({ error: 'Token inválido o expirado' });
   }
 }
@@ -189,7 +194,7 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
     const worksheet = workbook.addWorksheet('Reportes');
     worksheet.columns = [
       { header: 'ID', key: 'id', width: 10 },
-      { header: 'Error', key: 'error', width: 30 },
+      { header: 'Reporte', key: 'reporte', width: 30 }, // 👈 corregido
       { header: 'Fecha', key: 'fecha', width: 15 },
       { header: 'Solicitud', key: 'solicitud', width: 20 },
       { header: 'Proyecto', key: 'proyecto', width: 20 },

@@ -6,15 +6,22 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 // ------- API helpers -------
 async function apiGet() {
-  const r = await fetch('/api/reportes');
+  const token = localStorage.getItem("token");
+  const r = await fetch('/api/reportes', {
+    headers: { "Authorization": "Bearer " + token }
+  });
   if (!r.ok) throw new Error('No se pudo leer los reportes');
   return await r.json();
 }
 
 async function apiPost(record) {
+  const token = localStorage.getItem("token");
   const r = await fetch('/api/reportes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(record)
   });
   if (!r.ok) throw new Error('No se pudo guardar el reporte');
@@ -22,9 +29,13 @@ async function apiPost(record) {
 }
 
 async function apiPut(id, patch) {
+  const token = localStorage.getItem("token");
   const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(patch)
   });
   if (!r.ok) throw new Error('No se pudo actualizar el reporte');
@@ -32,7 +43,11 @@ async function apiPut(id, patch) {
 }
 
 async function apiDelete(id) {
-  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const token = localStorage.getItem("token");
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { "Authorization": "Bearer " + token }
+  });
   if (!r.ok && r.status !== 204) throw new Error('No se pudo eliminar el reporte');
 }
 
@@ -48,11 +63,14 @@ function renderTable() {
 
   tbody.innerHTML = viewData.map(r => `
     <tr data-id="${r.id}">
-      <td>${escapeHtml(r["reporte"])}</td>
-      <td>${escapeHtml(r["fecha"])}</td>
-      <td>${escapeHtml(r["solicitud"])}</td>
-      <td>${escapeHtml(r["proyecto"])}</td>
-      <td><div class="editable" contenteditable="true">${escapeHtml(r["resultado"] || "")}</div></td>
+      <td>${escapeHtml(r.reporte)}</td>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.solicitud)}</td>
+      <td>${escapeHtml(r.proyecto)}</td>
+      <td>
+        <input type="text" class="form-control resultado-input" 
+               value="${escapeHtml(r.resultado || "")}">
+      </td>
       <td>
         <select class="form-select form-select-sm estado-select">
           <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
@@ -61,62 +79,59 @@ function renderTable() {
         </select>
       </td>
       <td>
-        <button class="btn btn-sm btn-success btn-send">➤</button>
+        <button class="btn btn-sm btn-success btn-save" disabled title="Guardar cambios">➤</button>
         <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
       </td>
     </tr>
   `).join('');
 
-  // inline edit Resultado (solo marca cambios, no guarda)
-  $$('#reportTable .editable').forEach((el) => {
-    el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+  // Detectar cambios en Resultado para habilitar botón guardar
+  $$('#reportTable .resultado-input').forEach(el => {
+    el.addEventListener('input', () => {
+      const tr = el.closest('tr');
+      tr.querySelector('.btn-save').disabled = false;
     });
   });
 
-  // cambiar estado (se guarda automáticamente al cambiar)
-  $$('#reportTable .estado-select').forEach((el) => {
-    el.addEventListener('change', async () => {
-      const tr = el.closest('tr');
+  // Guardar Resultado con botón
+  $$('#reportTable .btn-save').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
-      const value = el.value;
+      const resultadoEl = tr.querySelector('.resultado-input');
+      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
+      const estado = tr.querySelector('.estado-select')?.value;
+
       try {
-        const updated = await apiPut(id, { "estado": value });
+        const updated = await apiPut(id, { resultado: newResultado, estado });
         updateLocalData(id, updated);
-        renderTable();
-        showMessage("✅ Estado actualizado con éxito");
+        btn.disabled = true; // volver a deshabilitar
       } catch (err) {
         alert(err.message);
       }
     });
   });
 
-  // enviar cambios manualmente
-  $$('#reportTable .btn-send').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const tr = btn.closest('tr');
+  // Actualizar Estado automáticamente al cambiar
+  $$('#reportTable .estado-select').forEach(select => {
+    select.addEventListener('change', async () => {
+      const tr = select.closest('tr');
       const id = tr.getAttribute('data-id');
-
-      // leer valores de la fila
-      const resultadoDiv = tr.querySelector('.editable');
-      const estadoSelect = tr.querySelector('.estado-select');
-
-      const resultado = resultadoDiv ? resultadoDiv.innerText.trim() : "";
-      const estado = estadoSelect ? estadoSelect.value : "Pendiente";
+      const resultadoEl = tr.querySelector('.resultado-input');
+      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
+      const estado = select.value;
 
       try {
-        const updated = await apiPut(id, { "resultado": resultado, "estado": estado });
+        const updated = await apiPut(id, { resultado: newResultado, estado });
         updateLocalData(id, updated);
-        renderTable();
-        showMessage("✅ Reporte actualizado con éxito");
       } catch (err) {
-        alert("Error al actualizar: " + err.message);
+        alert(err.message);
       }
     });
   });
 
-  // eliminar
-  $$('#reportTable .btn-delete').forEach((btn) => {
+  // Eliminar
+  $$('#reportTable .btn-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
@@ -127,7 +142,6 @@ function renderTable() {
         viewData = viewData.filter(r => r.id !== id);
         renderTable();
         populateFilters();
-        showMessage("🗑️ Reporte eliminado");
       } catch (err) {
         alert(err.message);
       }
@@ -136,31 +150,53 @@ function renderTable() {
 }
 
 function updateLocalData(id, updated) {
-  const idxR = rawData.findIndex(x => x.id === id);
+  const idxR = rawData.findIndex(x => String(x.id) === String(id));
   if (idxR >= 0) rawData[idxR] = updated;
-  const idxV = viewData.findIndex(x => x.id === id);
+  const idxV = viewData.findIndex(x => String(x.id) === String(id));
   if (idxV >= 0) viewData[idxV] = updated;
 }
 
 function populateFilters() {
-  const proyectos = uniqueSorted(rawData.map(r => r.proyecto));
-  const solicitudes = uniqueSorted(rawData.map(r => r.solicitud));
-  $('#filterProyecto').innerHTML = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
-  $('#filterSolicitud').innerHTML = `<option value="">Todas</option>` + solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
+  const proyectos = uniqueSorted(viewData.map(r => r.proyecto));
+  const solicitudes = uniqueSorted(viewData.map(r => r.solicitud));
+
+  $('#filterProyecto').innerHTML =
+    `<option value="">Todos</option>` +
+    proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+
+  $('#filterSolicitud').innerHTML =
+    `<option value="">Todas</option>` +
+    solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
 }
 
 function applyFilters() {
   const p = $('#filterProyecto').value.trim();
   const s = $('#filterSolicitud').value.trim();
-  viewData = rawData.filter(r => (!p || r.proyecto === p) && (!s || r.solicitud === s));
+  const fInicio = $('#filterFechaInicio').value;
+  const fFin = $('#filterFechaFin').value;
+
+  viewData = rawData.filter(r => {
+    const matchProyecto = !p || r.proyecto === p;
+    const matchSolicitud = !s || r.solicitud === s;
+    const matchFecha =
+      (!fInicio || new Date(r.fecha) >= new Date(fInicio)) &&
+      (!fFin || new Date(r.fecha) <= new Date(fFin));
+
+    return matchProyecto && matchSolicitud && matchFecha;
+  });
+
   renderTable();
+  populateFilters();
 }
 
 function resetFilters() {
   $('#filterProyecto').value = '';
   $('#filterSolicitud').value = '';
+  $('#filterFechaInicio').value = '';
+  $('#filterFechaFin').value = '';
   viewData = [...rawData];
   renderTable();
+  populateFilters();
 }
 
 function escapeHtml(str){
@@ -180,15 +216,15 @@ function uniqueSorted(values){
 async function addReport(e) {
   e.preventDefault();
   const nuevo = {
-    "reporte": $('#addReporte').value.trim(),
-    "fecha": $('#addFecha').value,
-    "solicitud": $('#addSolicitud').value.trim(),
-    "proyecto": $('#addProyecto').value.trim(),
-    "resultado": $('#addResultado').value.trim(),
-    "estado": $('#addEstado').value
+    reporte: $('#addReporte').value.trim(),
+    fecha: $('#addFecha').value,
+    solicitud: $('#addSolicitud').value.trim(),
+    proyecto: $('#addProyecto').value.trim(),
+    resultado: $('#addResultado').value.trim(),
+    estado: $('#addEstado').value
   };
 
-  if (!nuevo["reporte"] || !nuevo["fecha"] || !nuevo["solicitud"] || !nuevo["proyecto"]) {
+  if (!nuevo.reporte || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
     alert("Todos los campos excepto Resultado son obligatorios.");
     return;
   }
@@ -201,31 +237,9 @@ async function addReport(e) {
     populateFilters();
     e.target.reset();
     $('#addEstado').value = "Pendiente"; // reset select
-    showMessage("✅ Reporte agregado con éxito");
   } catch (err) {
     alert(err.message);
   }
-}
-
-// ------- Mensaje temporal -------
-function showMessage(msg) {
-  let box = $('#msgBox');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'msgBox';
-    box.style.position = 'fixed';
-    box.style.bottom = '20px';
-    box.style.right = '20px';
-    box.style.background = '#28a745';
-    box.style.color = 'white';
-    box.style.padding = '10px 20px';
-    box.style.borderRadius = '6px';
-    box.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-    document.body.appendChild(box);
-  }
-  box.textContent = msg;
-  box.style.display = 'block';
-  setTimeout(() => { box.style.display = 'none'; }, 2500);
 }
 
 // ------- Boot -------
@@ -272,13 +286,28 @@ window.addEventListener('DOMContentLoaded', () => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     applyTheme(prefersDark ? 'dark' : 'light');
   }
-
   $('#themeToggle').addEventListener('click', toggleTheme);
 
-  $('#btnExport').addEventListener('click', (e) => {
+  // Exportar a Excel con token
+  $('#btnExport').addEventListener('click', () => {
     if (!rawData.length) {
-      e.preventDefault();
       alert('No hay datos para exportar.');
+      return;
     }
+    const token = localStorage.getItem("token");
+    window.location.href = `/api/export-excel?token=${token}`;
   });
+
+  // Logout
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "/index.html";
+    });
+  }
+});
+
+$$('#reportTable td').forEach(td => {
+  td.setAttribute('title', td.innerText);
 });
