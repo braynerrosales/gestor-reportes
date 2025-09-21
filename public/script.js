@@ -63,18 +63,16 @@ function renderTable() {
 
   tbody.innerHTML = viewData.map(r => `
     <tr data-id="${r.id}">
-      <td>${escapeHtml(r["Reporte (Error)"])}</td>
-      <td>${escapeHtml(r["Fecha"])}</td>
-      <td>${escapeHtml(r["Solicitud"])}</td>
-      <td>${escapeHtml(r["Proyecto"])}</td>
-      <td>
-        <input type="text" class="form-control resultado-input" value="${escapeHtml(r["Resultado"] || "")}">
-      </td>
+      <td>${escapeHtml(r.reporte)}</td>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.solicitud)}</td>
+      <td>${escapeHtml(r.proyecto)}</td>
+      <td><div class="editable" contenteditable="true">${escapeHtml(r.resultado || "")}</div></td>
       <td>
         <select class="form-select form-select-sm estado-select">
-          <option value="Pendiente" ${r.Estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
-          <option value="Reportado" ${r.Estado === "Reportado" ? "selected" : ""}>Reportado</option>
-          <option value="Resuelto" ${r.Estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
+          <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
+          <option value="Reportado" ${r.estado === "Reportado" ? "selected" : ""}>Reportado</option>
+          <option value="Resuelto" ${r.estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
         </select>
       </td>
       <td>
