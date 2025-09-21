@@ -63,7 +63,7 @@ function renderTable() {
 
   tbody.innerHTML = viewData.map(r => `
     <tr data-id="${r.id}">
-      <td>${escapeHtml(r.error)}</td>
+      <td>${escapeHtml(r.reporte)}</td>
       <td>${escapeHtml(r.fecha)}</td>
       <td>${escapeHtml(r.solicitud)}</td>
       <td>${escapeHtml(r.proyecto)}</td>
