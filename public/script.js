@@ -68,7 +68,8 @@ function renderTable() {
       <td>${escapeHtml(r.solicitud)}</td>
       <td>${escapeHtml(r.proyecto)}</td>
       <td>
-        <input type="text" class="form-control resultado-input" value="${escapeHtml(r.resultado || "")}">
+        <input type="text" class="form-control resultado-input" 
+               value="${escapeHtml(r.resultado || "")}">
       </td>
       <td>
         <select class="form-select form-select-sm estado-select">
@@ -97,13 +98,14 @@ function renderTable() {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
-      const newResultado = tr.querySelector('.resultado-input').value.trim();
-      const estado = tr.querySelector('.estado-select').value;
+      const resultadoEl = tr.querySelector('.resultado-input');
+      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
+      const estado = tr.querySelector('.estado-select')?.value;
 
       try {
         const updated = await apiPut(id, { resultado: newResultado, estado });
         updateLocalData(id, updated);
-        btn.disabled = true; // deshabilitar otra vez
+        btn.disabled = true; // volver a deshabilitar
       } catch (err) {
         alert(err.message);
       }
@@ -115,7 +117,8 @@ function renderTable() {
     select.addEventListener('change', async () => {
       const tr = select.closest('tr');
       const id = tr.getAttribute('data-id');
-      const newResultado = tr.querySelector('.resultado-input').value.trim();
+      const resultadoEl = tr.querySelector('.resultado-input');
+      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
       const estado = select.value;
 
       try {

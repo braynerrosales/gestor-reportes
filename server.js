@@ -128,13 +128,13 @@ app.get('/api/reportes', authMiddleware, async (req, res) => {
 // Agregar reporte
 app.post('/api/reportes', authMiddleware, async (req, res) => {
   try {
-    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
+    const { error, fecha, solicitud, proyecto, resultado, estado } = req.body;
     const result = await pool.query(
-      `INSERT INTO reportes (reporte, fecha, solicitud, proyecto, resultado, estado)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [reporte, fecha, solicitud, proyecto, resultado, estado]
+      `INSERT INTO reportes (error, fecha, solicitud, proyecto, resultado, estado, usuario_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [error, fecha, solicitud, proyecto, resultado, estado, req.user.id]
     );
-    await logAction(req.user.username, `Agregó nuevo reporte (${reporte})`, '/api/reportes');
+    await logAction(req.user.username, `Agregó nuevo reporte (${error})`, '/api/reportes');
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error al agregar reporte:', err);
@@ -142,18 +142,40 @@ app.post('/api/reportes', authMiddleware, async (req, res) => {
   }
 });
 
-// Actualizar reporte
+// Actualizar reporte (dinámico)
 app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
-    const result = await pool.query(
-      `UPDATE reportes
-       SET reporte=$1, fecha=$2, solicitud=$3, proyecto=$4, resultado=$5, estado=$6
-       WHERE id=$7 RETURNING *`,
-      [reporte, fecha, solicitud, proyecto, resultado, estado, id]
-    );
-    if (result.rows.length === 0) return res.status(404).send('Reporte no encontrado');
+    const fields = req.body;
+
+    if (Object.keys(fields).length === 0) {
+      return res.status(400).json({ error: 'No se enviaron campos para actualizar' });
+    }
+
+    // Construir query dinámicamente
+    const setClauses = [];
+    const values = [];
+    let idx = 1;
+
+    for (const [key, value] of Object.entries(fields)) {
+      setClauses.push(`${key}=$${idx}`);
+      values.push(value);
+      idx++;
+    }
+
+    values.push(id);
+    const query = `
+      UPDATE reportes
+      SET ${setClauses.join(', ')}
+      WHERE id=$${idx}
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
 
     await logAction(req.user.username, `Actualizó reporte ${id}`, '/api/reportes');
     res.json(result.rows[0]);
