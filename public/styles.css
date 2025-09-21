@@ -168,3 +168,36 @@ body.animating::before {
   width: 200vmax;
   height: 200vmax;
 }
+
+/* Forzar tema oscuro/claro sobre Bootstrap */
+body {
+  background-color: var(--bg-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+body.light {
+  background-color: var(--bg-light) !important;
+  color: var(--text-light) !important;
+}
+
+/* Botones personalizados */
+#logoutBtn {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+#themeToggle {
+  border: 1px solid var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+/* Tabla coherente con tu estilo */
+.table {
+  background-color: var(--card-dark) !important;
+  color: var(--text-dark) !important;
+}
+body.light .table {
+  background-color: var(--card-light) !important;
+  color: var(--text-light) !important;
+}
