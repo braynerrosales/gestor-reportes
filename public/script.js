@@ -67,10 +67,7 @@ function renderTable() {
       <td>${escapeHtml(r.fecha)}</td>
       <td>${escapeHtml(r.solicitud)}</td>
       <td>${escapeHtml(r.proyecto)}</td>
-      <td>
-        <input type="text" class="form-control resultado-input" 
-               value="${escapeHtml(r.resultado || "")}">
-      </td>
+      <td><div class="editable" contenteditable="true">${escapeHtml(r.resultado || "")}</div></td>
       <td>
         <select class="form-select form-select-sm estado-select">
           <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
@@ -79,59 +76,61 @@ function renderTable() {
         </select>
       </td>
       <td>
-        <button class="btn btn-sm btn-success btn-save" disabled title="Guardar cambios">➤</button>
+        <button class="btn btn-sm btn-success btn-save" 
+          ${r.bloqueado ? "disabled style='background:grey;cursor:not-allowed;'" : ""}>
+          ➤
+        </button>
         <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
       </td>
     </tr>
   `).join('');
 
-  // Detectar cambios en Resultado para habilitar botón guardar
-  $$('#reportTable .resultado-input').forEach(el => {
+  // Eventos de edición
+  $$('#reportTable .editable').forEach((el) => {
+    const tr = el.closest('tr');
+    const btn = tr.querySelector('.btn-save');
+
     el.addEventListener('input', () => {
-      const tr = el.closest('tr');
-      tr.querySelector('.btn-save').disabled = false;
+      btn.disabled = false;
+      btn.style.background = "";
+      btn.style.cursor = "pointer";
     });
   });
 
-  // Guardar Resultado con botón
-  $$('#reportTable .btn-save').forEach(btn => {
+  $$('#reportTable .estado-select').forEach((el) => {
+    const tr = el.closest('tr');
+    const btn = tr.querySelector('.btn-save');
+
+    el.addEventListener('change', () => {
+      btn.disabled = false;
+      btn.style.background = "";
+      btn.style.cursor = "pointer";
+    });
+  });
+
+  // Guardar cambios manualmente
+  $$('#reportTable .btn-save').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
-      const resultadoEl = tr.querySelector('.resultado-input');
-      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
-      const estado = tr.querySelector('.estado-select')?.value;
+      const resultadoDiv = tr.querySelector('.editable');
+      const estadoSelect = tr.querySelector('.estado-select');
+
+      const resultado = resultadoDiv ? resultadoDiv.innerText.trim() : "";
+      const estado = estadoSelect ? estadoSelect.value : "Pendiente";
 
       try {
-        const updated = await apiPut(id, { resultado: newResultado, estado });
+        const updated = await apiPut(id, { resultado, estado });
         updateLocalData(id, updated);
-        btn.disabled = true; // volver a deshabilitar
+        renderTable(); // refresca la tabla para aplicar "bloqueado"
       } catch (err) {
-        alert(err.message);
-      }
-    });
-  });
-
-  // Actualizar Estado automáticamente al cambiar
-  $$('#reportTable .estado-select').forEach(select => {
-    select.addEventListener('change', async () => {
-      const tr = select.closest('tr');
-      const id = tr.getAttribute('data-id');
-      const resultadoEl = tr.querySelector('.resultado-input');
-      const newResultado = resultadoEl ? resultadoEl.value.trim() : "";
-      const estado = select.value;
-
-      try {
-        const updated = await apiPut(id, { resultado: newResultado, estado });
-        updateLocalData(id, updated);
-      } catch (err) {
-        alert(err.message);
+        alert("Error al actualizar: " + err.message);
       }
     });
   });
 
   // Eliminar
-  $$('#reportTable .btn-delete').forEach(btn => {
+  $$('#reportTable .btn-delete').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
@@ -157,46 +156,24 @@ function updateLocalData(id, updated) {
 }
 
 function populateFilters() {
-  const proyectos = uniqueSorted(viewData.map(r => r.proyecto));
-  const solicitudes = uniqueSorted(viewData.map(r => r.solicitud));
-
-  $('#filterProyecto').innerHTML =
-    `<option value="">Todos</option>` +
-    proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
-
-  $('#filterSolicitud').innerHTML =
-    `<option value="">Todas</option>` +
-    solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
+  const proyectos = uniqueSorted(rawData.map(r => r.proyecto));
+  const solicitudes = uniqueSorted(rawData.map(r => r.solicitud));
+  $('#filterProyecto').innerHTML = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+  $('#filterSolicitud').innerHTML = `<option value="">Todas</option>` + solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
 }
 
 function applyFilters() {
   const p = $('#filterProyecto').value.trim();
   const s = $('#filterSolicitud').value.trim();
-  const fInicio = $('#filterFechaInicio').value;
-  const fFin = $('#filterFechaFin').value;
-
-  viewData = rawData.filter(r => {
-    const matchProyecto = !p || r.proyecto === p;
-    const matchSolicitud = !s || r.solicitud === s;
-    const matchFecha =
-      (!fInicio || new Date(r.fecha) >= new Date(fInicio)) &&
-      (!fFin || new Date(r.fecha) <= new Date(fFin));
-
-    return matchProyecto && matchSolicitud && matchFecha;
-  });
-
+  viewData = rawData.filter(r => (!p || r.proyecto === p) && (!s || r.solicitud === s));
   renderTable();
-  populateFilters();
 }
 
 function resetFilters() {
   $('#filterProyecto').value = '';
   $('#filterSolicitud').value = '';
-  $('#filterFechaInicio').value = '';
-  $('#filterFechaFin').value = '';
   viewData = [...rawData];
   renderTable();
-  populateFilters();
 }
 
 function escapeHtml(str){
@@ -236,7 +213,7 @@ async function addReport(e) {
     renderTable();
     populateFilters();
     e.target.reset();
-    $('#addEstado').value = "Pendiente"; // reset select
+    $('#addEstado').value = "Pendiente";
   } catch (err) {
     alert(err.message);
   }
@@ -288,7 +265,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   $('#themeToggle').addEventListener('click', toggleTheme);
 
-  // Exportar a Excel con token
   $('#btnExport').addEventListener('click', () => {
     if (!rawData.length) {
       alert('No hay datos para exportar.');
@@ -298,7 +274,6 @@ window.addEventListener('DOMContentLoaded', () => {
     window.location.href = `/api/export-excel?token=${token}`;
   });
 
-  // Logout
   const logoutBtn = document.getElementById("btnLogout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
@@ -306,8 +281,4 @@ window.addEventListener('DOMContentLoaded', () => {
       window.location.href = "/index.html";
     });
   }
-});
-
-$$('#reportTable td').forEach(td => {
-  td.setAttribute('title', td.innerText);
 });
