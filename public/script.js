@@ -6,13 +6,13 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 // ------- API helpers -------
 async function apiGet() {
-  const r = await fetch('/api/reports');
+  const r = await fetch('/api/reportes');
   if (!r.ok) throw new Error('No se pudo leer los reportes');
   return await r.json();
 }
 
 async function apiPost(record) {
-  const r = await fetch('/api/reports', {
+  const r = await fetch('/api/reportes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(record)
@@ -22,7 +22,7 @@ async function apiPost(record) {
 }
 
 async function apiPut(id, patch) {
-  const r = await fetch(`/api/reports/${encodeURIComponent(id)}`, {
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch)
@@ -32,7 +32,7 @@ async function apiPut(id, patch) {
 }
 
 async function apiDelete(id) {
-  const r = await fetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (!r.ok && r.status !== 204) throw new Error('No se pudo eliminar el reporte');
 }
 
@@ -245,4 +245,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     window.location.href = '/api/export-excel';
   });
+});
+
+const token = localStorage.getItem('token');
+const r = await fetch('/api/reportes', {
+  headers: { 'Authorization': 'Bearer ' + token }
 });
