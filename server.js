@@ -1,277 +1,285 @@
-//require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const ExcelJS = require('exceljs');
+let rawData = [];
+let viewData = [];
 
-const app = express();
-const PORT = process.env.PORT || 10000;
-const SECRET_KEY = process.env.JWT_SECRET || 'clave_super_secreta';
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static('public'));
+// ------- API helpers -------
+async function apiGet() {
+  const token = localStorage.getItem("token");
+  const r = await fetch('/api/reportes', {
+    headers: { "Authorization": "Bearer " + token }
+  });
+  if (!r.ok) throw new Error('No se pudo leer los reportes');
+  return await r.json();
+}
 
-// Conexión a PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+async function apiPost(record) {
+  const token = localStorage.getItem("token");
+  const r = await fetch('/api/reportes', {
+    method: 'POST',
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(record)
+  });
+  if (!r.ok) throw new Error('No se pudo guardar el reporte');
+  return await r.json();
+}
 
-// ================== BITÁCORA ==================
-async function logAction(usuario, accion, endpoint) {
+async function apiPut(id, patch) {
+  const token = localStorage.getItem("token");
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(patch)
+  });
+  if (!r.ok) throw new Error('No se pudo actualizar el reporte');
+  return await r.json();
+}
+
+async function apiDelete(id) {
+  const token = localStorage.getItem("token");
+  const r = await fetch(`/api/reportes/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { "Authorization": "Bearer " + token }
+  });
+  if (!r.ok && r.status !== 204) throw new Error('No se pudo eliminar el reporte');
+}
+
+// ------- UI -------
+function renderTable() {
+  const tbody = $('#reportTable tbody');
+  if (!viewData.length) {
+    tbody.innerHTML = '';
+    $('#emptyState').classList.remove('d-none');
+    return;
+  }
+  $('#emptyState').classList.add('d-none');
+
+  tbody.innerHTML = viewData.map(r => `
+    <tr data-id="${r.id}">
+      <td>${escapeHtml(r.reporte)}</td>
+      <td>${escapeHtml(r.fecha)}</td>
+      <td>${escapeHtml(r.solicitud)}</td>
+      <td>${escapeHtml(r.proyecto)}</td>
+      <td><div class="editable" contenteditable="true">${escapeHtml(r.resultado || "")}</div></td>
+      <td>
+        <select class="form-select form-select-sm estado-select">
+          <option value="Pendiente" ${r.estado === "Pendiente" ? "selected" : ""}>Pendiente</option>
+          <option value="Reportado" ${r.estado === "Reportado" ? "selected" : ""}>Reportado</option>
+          <option value="Resuelto" ${r.estado === "Resuelto" ? "selected" : ""}>Resuelto</option>
+        </select>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-success btn-save" 
+          ${r.bloqueado ? "disabled style='background:grey;cursor:not-allowed;'" : ""}>
+          ➤
+        </button>
+        <button class="btn btn-sm btn-danger btn-delete">Eliminar</button>
+      </td>
+    </tr>
+  `).join('');
+
+  // Eventos de edición
+  $$('#reportTable .editable').forEach((el) => {
+    const tr = el.closest('tr');
+    const btn = tr.querySelector('.btn-save');
+
+    el.addEventListener('input', () => {
+      btn.disabled = false;
+      btn.style.background = "";
+      btn.style.cursor = "pointer";
+    });
+  });
+
+  $$('#reportTable .estado-select').forEach((el) => {
+    const tr = el.closest('tr');
+    const btn = tr.querySelector('.btn-save');
+
+    el.addEventListener('change', () => {
+      btn.disabled = false;
+      btn.style.background = "";
+      btn.style.cursor = "pointer";
+    });
+  });
+
+  // Guardar cambios manualmente
+  $$('#reportTable .btn-save').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const tr = btn.closest('tr');
+      const id = tr.getAttribute('data-id');
+      const resultadoDiv = tr.querySelector('.editable');
+      const estadoSelect = tr.querySelector('.estado-select');
+
+      const resultado = resultadoDiv ? resultadoDiv.innerText.trim() : "";
+      const estado = estadoSelect ? estadoSelect.value : "Pendiente";
+
+      try {
+        const updated = await apiPut(id, { resultado, estado });
+        updateLocalData(id, updated);
+        renderTable(); // refresca la tabla para aplicar "bloqueado"
+      } catch (err) {
+        alert("Error al actualizar: " + err.message);
+      }
+    });
+  });
+
+  // Eliminar
+  $$('#reportTable .btn-delete').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const tr = btn.closest('tr');
+      const id = tr.getAttribute('data-id');
+      if (!confirm('¿Seguro que deseas eliminar este reporte?')) return;
+      try {
+        await apiDelete(id);
+        rawData = rawData.filter(r => r.id !== id);
+        viewData = viewData.filter(r => r.id !== id);
+        renderTable();
+        populateFilters();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+}
+
+function updateLocalData(id, updated) {
+  const idxR = rawData.findIndex(x => String(x.id) === String(id));
+  if (idxR >= 0) rawData[idxR] = updated;
+  const idxV = viewData.findIndex(x => String(x.id) === String(id));
+  if (idxV >= 0) viewData[idxV] = updated;
+}
+
+function populateFilters() {
+  const proyectos = uniqueSorted(rawData.map(r => r.proyecto));
+  const solicitudes = uniqueSorted(rawData.map(r => r.solicitud));
+  $('#filterProyecto').innerHTML = `<option value="">Todos</option>` + proyectos.map(p => `<option>${escapeHtml(p)}</option>`).join('');
+  $('#filterSolicitud').innerHTML = `<option value="">Todas</option>` + solicitudes.map(s => `<option>${escapeHtml(s)}</option>`).join('');
+}
+
+function applyFilters() {
+  const p = $('#filterProyecto').value.trim();
+  const s = $('#filterSolicitud').value.trim();
+  viewData = rawData.filter(r => (!p || r.proyecto === p) && (!s || r.solicitud === s));
+  renderTable();
+}
+
+function resetFilters() {
+  $('#filterProyecto').value = '';
+  $('#filterSolicitud').value = '';
+  viewData = [...rawData];
+  renderTable();
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function uniqueSorted(values){
+  return [...new Set(values.filter(Boolean))].sort((a,b)=> (''+a).localeCompare((''+b), 'es', {numeric:true, sensitivity:'base'}));
+}
+
+// ------- Agregar -------
+async function addReport(e) {
+  e.preventDefault();
+  const nuevo = {
+    reporte: $('#addReporte').value.trim(),
+    fecha: $('#addFecha').value,
+    solicitud: $('#addSolicitud').value.trim(),
+    proyecto: $('#addProyecto').value.trim(),
+    resultado: $('#addResultado').value.trim(),
+    estado: $('#addEstado').value
+  };
+
+  if (!nuevo.reporte || !nuevo.fecha || !nuevo.solicitud || !nuevo.proyecto) {
+    alert("Todos los campos excepto Resultado son obligatorios.");
+    return;
+  }
+
   try {
-    await pool.query(
-      'INSERT INTO bitacora (usuario, accion, endpoint) VALUES ($1, $2, $3)',
-      [usuario || 'Anónimo', accion, endpoint]
-    );
+    const saved = await apiPost(nuevo);
+    rawData.push(saved);
+    viewData = [...rawData];
+    renderTable();
+    populateFilters();
+    e.target.reset();
+    $('#addEstado').value = "Pendiente";
   } catch (err) {
-    console.error('Error al registrar bitácora:', err);
+    alert(err.message);
   }
 }
 
-// ================== AUDITORÍA DE ERRORES ==================
-async function logError(usuario, error, endpoint) {
+// ------- Boot -------
+async function boot() {
   try {
-    await pool.query(
-      'INSERT INTO auditoria_errores (usuario, error, endpoint) VALUES ($1, $2, $3)',
-      [usuario || 'Anónimo', error, endpoint]
-    );
+    rawData = await apiGet();
+    viewData = [...rawData];
+    populateFilters();
+    renderTable();
   } catch (err) {
-    console.error('Error al registrar auditoría de errores:', err);
+    alert(err.message);
   }
 }
 
-// ================== MIDDLEWARE ==================
-function authMiddleware(req, res, next) {
-  let token;
-  const header = req.headers['authorization'];
-  if (header) {
-    token = header.split(' ')[1];
+// ------- Tema oscuro/claro -------
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.body.classList.add('dark');
+    $('#themeToggle').textContent = '🌙';
+  } else {
+    document.body.classList.remove('dark');
+    $('#themeToggle').textContent = '🌞';
   }
-  if (!token && req.query.token) {
-    token = req.query.token;
-  }
-  if (!token) {
-    logError(null, 'Token requerido', req.originalUrl);
-    return res.status(401).json({ error: 'Token requerido' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    logError(null, 'Token inválido o expirado', req.originalUrl);
-    return res.status(403).json({ error: 'Token inválido o expirado' });
-  }
+  localStorage.setItem('theme', theme);
 }
 
-// ================== AUTH ==================
-// Registro
-app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    if (!username || !password) return res.status(400).send('Faltan datos');
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
-    const result = await pool.query(
-      'INSERT INTO usuarios (username, password_hash) VALUES ($1, $2) RETURNING id, username',
-      [username, password_hash]
-    );
-    await logAction(username, 'Registro de usuario', '/api/register');
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error en /api/register:', err);
-    await logError(username, err.message, '/api/register');
-    res.status(500).json({ error: 'Error al registrar usuario' });
-  }
-});
+function toggleTheme() {
+  const isDark = document.body.classList.contains('dark');
+  const theme = isDark ? 'light' : 'dark';
+  applyTheme(theme);
+}
 
-// Login
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Faltan credenciales' });
+window.addEventListener('DOMContentLoaded', () => {
+  boot();
+
+  $('#filterForm').addEventListener('submit', e => { e.preventDefault(); applyFilters(); });
+  $('#btnResetFilters').addEventListener('click', resetFilters);
+  $('#addForm').addEventListener('submit', addReport);
+
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  } else {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
+  $('#themeToggle').addEventListener('click', toggleTheme);
+
+  $('#btnExport').addEventListener('click', () => {
+    if (!rawData.length) {
+      alert('No hay datos para exportar.');
+      return;
     }
+    const token = localStorage.getItem("token");
+    window.location.href = `/api/export-excel?token=${token}`;
+  });
 
-    const result = await pool.query(
-      'SELECT * FROM usuarios WHERE username = $1',
-      [username]
-    );
-
-    if (result.rows.length === 0) {
-      await logAction(null, `Intento fallido login con usuario ${username}`, '/api/login');
-      return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-    }
-
-    const user = result.rows[0];
-    console.log("Intentando login con usuario:", user.username);
-
-    const valid = await bcrypt.compare(password, user.password_hash);
-
-    if (!valid) {
-      await logAction(user.username, 'Contraseña incorrecta', '/api/login');
-      return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, username: user.username },
-      SECRET_KEY,
-      { expiresIn: '2h' }
-    );
-
-    await logAction(user.username, 'Ingreso exitoso', '/api/login');
-    return res.json({ token });
-
-  } catch (err) {
-    console.error('Error detallado en /api/login:', err);  // 👈 imprime el error real
-    await logError(username, err.message, '/api/login');
-    return res.status(500).json({ error: 'Error en login' });
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "/index.html";
+    });
   }
 });
-
-// ================== REPORTES ==================
-app.get('/api/reportes', authMiddleware, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM reportes ORDER BY id DESC');
-    await logAction(req.user.username, 'Consulta de reportes', '/api/reportes');
-    res.json(result.rows);
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
-    res.status(500).json({ error: 'Error al obtener reportes' });
-  }
-});
-
-app.post('/api/reportes', authMiddleware, async (req, res) => {
-  try {
-    const { reporte, fecha, solicitud, proyecto, resultado, estado } = req.body;
-    const result = await pool.query(
-      `INSERT INTO reportes (reporte, fecha, solicitud, proyecto, resultado, estado, usuario_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [reporte, fecha, solicitud, proyecto, resultado, estado, req.user.id]
-    );
-    await logAction(req.user.username, `Agregó nuevo reporte (${reporte})`, '/api/reportes');
-    res.json(result.rows[0]);
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
-    res.status(500).json({ error: 'Error al agregar reporte' });
-  }
-});
-
-// Actualizar (dinámico)
-app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const fields = req.body;
-    if (Object.keys(fields).length === 0) {
-      return res.status(400).json({ error: 'No se enviaron campos para actualizar' });
-    }
-    const setClauses = [];
-    const values = [];
-    let idx = 1;
-    for (const [key, value] of Object.entries(fields)) {
-      setClauses.push(`${key}=$${idx}`);
-      values.push(value);
-      idx++;
-    }
-    values.push(id);
-    const query = `UPDATE reportes SET ${setClauses.join(', ')} WHERE id=$${idx} RETURNING *;`;
-    const result = await pool.query(query, values);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Reporte no encontrado' });
-    await logAction(req.user.username, `Actualizó reporte ${id}`, '/api/reportes');
-    res.json(result.rows[0]);
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
-    res.status(500).json({ error: 'Error al actualizar reporte' });
-  }
-});
-
-app.delete('/api/reportes/:id', authMiddleware, async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM reportes WHERE id=$1', [id]);
-    await logAction(req.user.username, `Eliminó reporte ${id}`, '/api/reportes');
-    res.sendStatus(204);
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
-    res.status(500).json({ error: 'Error al eliminar reporte' });
-  }
-});
-
-// ================== EXPORTAR A EXCEL ==================
-app.get('/api/export-excel', authMiddleware, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM reportes ORDER BY id DESC');
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Reportes');
-    worksheet.columns = [
-      { header: 'ID', key: 'id', width: 10 },
-      { header: 'Reporte', key: 'reporte', width: 30 },
-      { header: 'Fecha', key: 'fecha', width: 15 },
-      { header: 'Solicitud', key: 'solicitud', width: 20 },
-      { header: 'Proyecto', key: 'proyecto', width: 20 },
-      { header: 'Resultado', key: 'resultado', width: 30 },
-      { header: 'Estado', key: 'estado', width: 15 }
-    ];
-    worksheet.addRows(result.rows);
-    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition','attachment; filename=reportes.xlsx');
-    await workbook.xlsx.write(res);
-    res.end();
-    await logAction(req.user.username, 'Exportó reportes a Excel', '/api/export-excel');
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/export-excel');
-    res.status(500).json({ error: 'Error al exportar Excel' });
-  }
-});
-
-// ================== BITÁCORA (paginada) ==================
-app.get('/api/bitacora', authMiddleware, async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const totalRes = await pool.query('SELECT COUNT(*) FROM bitacora');
-    const total = parseInt(totalRes.rows[0].count);
-    const totalPages = Math.ceil(total / limit);
-    const result = await pool.query(
-      'SELECT * FROM bitacora ORDER BY fecha DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
-    );
-    res.json({ data: result.rows, pagination: { total, page, limit, totalPages } });
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/bitacora');
-    res.status(500).json({ error: 'Error al obtener bitácora' });
-  }
-});
-
-// ================== AUDITORÍA DE ERRORES (paginada) ==================
-app.get('/api/auditoria-errores', authMiddleware, async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const totalRes = await pool.query('SELECT COUNT(*) FROM auditoria_errores');
-    const total = parseInt(totalRes.rows[0].count);
-    const totalPages = Math.ceil(total / limit);
-    const result = await pool.query(
-      'SELECT * FROM auditoria_errores ORDER BY fecha DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
-    );
-    res.json({ data: result.rows, pagination: { total, page, limit, totalPages } });
-  } catch (err) {
-    await logError(req.user?.username, err.message, '/api/auditoria-errores');
-    res.status(500).json({ error: 'Error al obtener auditoría de errores' });
-  }
-});
-
-// ================== START ==================
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
+// ------- Tema oscuro/claro -------
