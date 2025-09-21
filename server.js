@@ -140,10 +140,10 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/reportes', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM reportes ORDER BY id DESC');
-    await logAction(req.user.username, 'Consulta de reportes', '/api/reportes');
+    await logAction(req.user.username, `Consulta de reportes (IP: ${req.ip})`, '/api/reportes');
     res.json(result.rows);
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
+    await logError(req.user?.username, `Error: ${err.message} | IP: ${req.ip}`, '/api/reportes');
     res.status(500).json({ error: 'Error al obtener reportes' });
   }
 });
@@ -156,15 +156,18 @@ app.post('/api/reportes', authMiddleware, async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [reporte, fecha, solicitud, proyecto, resultado, estado, req.user.id]
     );
-    await logAction(req.user.username, `Agregó nuevo reporte (${reporte})`, '/api/reportes');
+    await logAction(
+      req.user.username,
+      `Agregó nuevo reporte (${reporte}) (IP: ${req.ip}) | Body: ${JSON.stringify(req.body)}`,
+      '/api/reportes'
+    );
     res.json(result.rows[0]);
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
+    await logError(req.user?.username, `Error: ${err.message} | Body: ${JSON.stringify(req.body)} | IP: ${req.ip}`, '/api/reportes');
     res.status(500).json({ error: 'Error al agregar reporte' });
   }
 });
 
-// Actualizar (dinámico)
 app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -183,11 +186,19 @@ app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
     values.push(id);
     const query = `UPDATE reportes SET ${setClauses.join(', ')} WHERE id=$${idx} RETURNING *;`;
     const result = await pool.query(query, values);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Reporte no encontrado' });
-    await logAction(req.user.username, `Actualizó reporte ${id}`, '/api/reportes');
+    if (result.rows.length === 0) {
+      await logAction(req.user.username, `Intento fallido de actualizar reporte inexistente (${id}) (IP: ${req.ip})`, '/api/reportes');
+      await logError(req.user.username, `Intento actualizar reporte inexistente (${id}) (IP: ${req.ip})`, '/api/reportes');
+      return res.status(404).json({ error: 'Reporte no encontrado' });
+    }
+    await logAction(
+      req.user.username,
+      `Actualizó reporte ${id} (IP: ${req.ip}) | Body: ${JSON.stringify(req.body)}`,
+      '/api/reportes'
+    );
     res.json(result.rows[0]);
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/reportes');
+    await logError(req.user?.username, `Error: ${err.message} | Body: ${JSON.stringify(req.body)} | IP: ${req.ip}`, '/api/reportes');
     res.status(500).json({ error: 'Error al actualizar reporte' });
   }
 });
@@ -195,17 +206,22 @@ app.put('/api/reportes/:id', authMiddleware, async (req, res) => {
 app.delete('/api/reportes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`[DELETE] Intentando eliminar reporte con id: ${id}`);
+    const usuario = req.user?.username || 'Anónimo';
+    const ip = req.ip;
+    console.log(`[DELETE] Intentando eliminar reporte con id: ${id} por ${usuario} desde ${ip}`);
     const result = await pool.query('DELETE FROM reportes WHERE id=$1 RETURNING *', [id]);
     if (result.rowCount === 0) {
-      await logAction(req.user.username, `Intento fallido de eliminar reporte inexistente (${id})`, '/api/reportes');
+      await logAction(usuario, `Intento fallido de eliminar reporte inexistente (${id}) desde ${ip}`, '/api/reportes');
+      await logError(usuario, `Intento eliminar reporte inexistente (${id}) desde ${ip}`, '/api/reportes');
       return res.status(404).json({ error: 'Reporte no encontrado' });
     }
-    await logAction(req.user.username, `Eliminó reporte ${id}`, '/api/reportes');
+    await logAction(usuario, `Eliminó reporte ${id} desde ${ip}`, '/api/reportes');
     res.sendStatus(204);
   } catch (err) {
+    const usuario = req.user?.username || 'Anónimo';
+    const ip = req.ip;
     console.error('Error al eliminar reporte:', err);
-    await logError(req.user?.username, err.message, '/api/reportes');
+    await logError(usuario, `Error: ${err.message} | id: ${req.params.id} | IP: ${ip}`, '/api/reportes');
     res.status(500).json({ error: 'Error al eliminar reporte' });
   }
 });
@@ -230,9 +246,9 @@ app.get('/api/export-excel', authMiddleware, async (req, res) => {
     res.setHeader('Content-Disposition','attachment; filename=reportes.xlsx');
     await workbook.xlsx.write(res);
     res.end();
-    await logAction(req.user.username, 'Exportó reportes a Excel', '/api/export-excel');
+    await logAction(req.user.username, `Exportó reportes a Excel (IP: ${req.ip})`, '/api/export-excel');
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/export-excel');
+    await logError(req.user?.username, `Error: ${err.message} | IP: ${req.ip}`, '/api/export-excel');
     res.status(500).json({ error: 'Error al exportar Excel' });
   }
 });
@@ -250,9 +266,10 @@ app.get('/api/bitacora', authMiddleware, async (req, res) => {
       'SELECT * FROM bitacora ORDER BY fecha DESC LIMIT $1 OFFSET $2',
       [limit, offset]
     );
+    await logAction(req.user.username, `Consulta de bitácora (page: ${page}, limit: ${limit}, IP: ${req.ip})`, '/api/bitacora');
     res.json({ data: result.rows, pagination: { total, page, limit, totalPages } });
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/bitacora');
+    await logError(req.user?.username, `Error: ${err.message} | IP: ${req.ip}`, '/api/bitacora');
     res.status(500).json({ error: 'Error al obtener bitácora' });
   }
 });
@@ -270,9 +287,10 @@ app.get('/api/auditoria-errores', authMiddleware, async (req, res) => {
       'SELECT * FROM auditoria_errores ORDER BY fecha DESC LIMIT $1 OFFSET $2',
       [limit, offset]
     );
+    await logAction(req.user.username, `Consulta de auditoría de errores (page: ${page}, limit: ${limit}, IP: ${req.ip})`, '/api/auditoria-errores');
     res.json({ data: result.rows, pagination: { total, page, limit, totalPages } });
   } catch (err) {
-    await logError(req.user?.username, err.message, '/api/auditoria-errores');
+    await logError(req.user?.username, `Error: ${err.message} | IP: ${req.ip}`, '/api/auditoria-errores');
     res.status(500).json({ error: 'Error al obtener auditoría de errores' });
   }
 });
