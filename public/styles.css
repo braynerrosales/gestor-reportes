@@ -97,3 +97,9 @@ body.dark textarea {
   vertical-align: top;     /* Alinea arriba si el texto es largo */
   max-width: 400px;        /* Ajusta el ancho máximo */
 }
+
+.btn-disabled {
+  background-color: grey !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
